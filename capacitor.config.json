@@ -1,0 +1,10 @@
+{
+  "appId": "com.cathelcreamy.demo",
+  "appName": "Cathel Creamy Demo",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://raymhlongo.github.io/APP-Demo/",
+    "cleartext": false
+  }
+}
