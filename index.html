@@ -4,13 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Cathel Creamy</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#41A5B9">
+<meta name="application-name" content="Cathel Creamy">
+<meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Cathel Creamy">
+<meta name="apple-touch-fullscreen" content="yes">
+<meta name="color-scheme" content="light">
 <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
 <link rel="dns-prefetch" href="//script.google.com">
 <link rel="preconnect" href="https://script.google.com" crossorigin>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -372,6 +378,43 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 .wa-preview{background:#E8F5E9;border-radius:var(--r-s);padding:14px;font-size:13px;line-height:1.6;margin-bottom:14px;border-left:3px solid #25D366;color:#1A3A40}
 .recipient-count{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:28px;font-weight:800;color:var(--teal);text-align:center;margin-bottom:4px}
 .recipient-label{font-size:11px;color:var(--text-3);text-align:center;margin-bottom:16px;text-transform:uppercase;letter-spacing:.8px}
+.brain-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.brain-tag{font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--teal-xl);color:var(--teal);white-space:nowrap}
+.brain-summary{font-size:12px;color:var(--text-2);line-height:1.5}
+.brain-list{margin-top:10px;border-top:1px dashed var(--border);padding-top:8px;display:grid;gap:6px}
+.brain-item{display:flex;justify-content:space-between;gap:10px;font-size:11px}
+.brain-item strong{color:var(--text)}
+.brain-item span{color:var(--text-3)}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* SMART INSIGHTS */
+.insight-list{display:grid;gap:9px}
+.insight-item{display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border);background:linear-gradient(180deg,#FCFFFF,#F4FCFD)}
+.insight-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--teal)}
+.insight-item.warn .insight-dot{background:var(--cream-d)}
+.insight-item.risk .insight-dot{background:var(--red)}
+.insight-title{font-weight:700;font-size:12px;color:var(--text)}
+.insight-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+.insight-foot{font-size:10px;color:var(--text-3);margin-top:8px;text-align:right}
+
+/* CUSTOMER 360 + NOTIFICATIONS */
+.notif-btn{position:relative;width:34px;height:34px;border-radius:999px;border:1.5px solid rgba(255,255,255,.48);background:rgba(255,255,255,.18);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;backdrop-filter:blur(2px)}
+.notif-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:999px;background:#EF4444;color:white;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px;border:2px solid rgba(255,255,255,.92)}
+.mini-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}
+.mini-kpi{background:var(--teal-xl);border:1.5px solid var(--border);border-radius:12px;padding:10px;text-align:center}
+.mini-kpi .k{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:18px;color:var(--teal);font-weight:800}
+.mini-kpi .l{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px}
+.timeline{border-top:1px dashed var(--border);margin-top:12px;padding-top:12px;display:grid;gap:8px;text-align:left}
+.timeline-item{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:8px 10px;border-radius:10px;background:#F8FDFE}
+.timeline-item .t-left{color:var(--text)}
+.timeline-item .t-right{font-weight:700;color:var(--teal)}
+.notif-list{max-height:300px;overflow:auto;margin-top:12px;display:grid;gap:8px;text-align:left}
+.notif-item{padding:11px 12px;border-radius:12px;border:1.5px solid var(--border);background:white}
+.notif-item.unread{background:#F1FBFD;border-color:#9ED8E1}
+.notif-item h4{font-size:12px;color:var(--text);margin-bottom:3px}
+.notif-item p{font-size:11px;color:var(--text-2);line-height:1.45;margin:0}
+.notif-item .meta{display:flex;justify-content:space-between;margin-top:7px;font-size:10px;color:var(--text-3)}
 
 /* END OF DAY REPORT */
 .report-header{text-align:center;padding:16px 0 20px;border-bottom:2px dashed var(--border);margin-bottom:16px}
@@ -415,6 +458,7 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
   <div class="hdr-right">
     <div class="hdr-date" id="hdrDate"></div>
     <button id="installBtn" onclick="installApp()">&#11015;&#65039; Install</button>
+    <button id="notifBtn" class="notif-btn" onclick="openNotifCenter()" aria-label="Notifications">&#128276;<span class="notif-badge" id="notifBadge">0</span></button>
     <div class="sync-dot" id="syncDot"></div>
   </div>
 </div>
@@ -533,6 +577,11 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
     </div>
   </div>
   <div class="card">
+    <div class="card-title">&#129504; Smart Insights</div>
+    <div class="insight-list" id="dashInsights"></div>
+    <div class="insight-foot" id="dashInsightsTime"></div>
+  </div>
+  <div class="card">
     <div class="card-title">&#128200; Revenue - Last 7 Days</div>
     <div class="chart-wrap"><canvas id="chartRevenue"></canvas></div>
   </div>
@@ -581,10 +630,25 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 <div class="screen" id="sc-broadcast">
   <div class="stitle">&#128241; WhatsApp Broadcast</div>
   <div class="card">
+    <div class="brain-head">
+      <div>
+        <div class="card-title" style="margin-bottom:6px">&#129504; Promo Brain</div>
+        <div class="brain-summary" id="promoBrainSummary">Analyzing your customer activity...</div>
+      </div>
+      <span class="brain-tag" id="promoBrainTag">Auto</span>
+    </div>
+    <div class="brain-list" id="promoBrainList"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-teal btn-sm" onclick="applyPromoBrain()">Use Recommended</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyBroadcastNumbers()">Copy Numbers</button>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-title">&#127919; Target Audience</div>
     <div class="srow">
       <div><div class="sl">Send to</div><div class="sd">Filter who receives this</div></div>
       <select id="bcast-filter" onchange="updateBroadcastPreview()">
+        <option value="brain">&#129504; Promo Brain (Recommended)</option>
         <option value="all">&#128101; All Customers</option>
         <option value="reward">&#127881; Ready for Reward</option>
         <option value="inactive">&#9203; Haven't bought this week</option>
@@ -614,8 +678,12 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
   <div class="card">
     <div class="card-title">&#128065;&#65039; Preview</div>
     <div class="wa-preview" id="bcastPreview">Your message will appear here...</div>
-    <p style="font-size:11px;color:var(--text-3);margin-bottom:14px"> This opens WhatsApp for each recipient one by one</p>
-    <button class="btn btn-wa" onclick="startBroadcast()">&#128241; Send via WhatsApp</button>
+    <p style="font-size:11px;color:var(--text-3);margin-bottom:14px">This free mode prepares the exact target list and message for WhatsApp broadcast flow.</p>
+    <div class="btn-row-3">
+      <button class="btn btn-ghost btn-sm" onclick="copyBroadcastMessage()">Copy Message</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyBroadcastPack()">Copy Pack</button>
+      <button class="btn btn-wa btn-sm" onclick="startBroadcast()">Open WhatsApp</button>
+    </div>
   </div>
 </div>
 
@@ -652,6 +720,33 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
   <div class="card">
     <div class="card-title">&#128227; Promotion Message</div>
     <div class="fg" style="margin-bottom:0"><label>Promotion message</label><textarea id="s-pmsg"></textarea></div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#128276; Notifications</div>
+    <div class="srow">
+      <div><div class="sl">Device permission</div><div class="sd">Current browser notification status</div></div>
+      <span class="badge" id="notifStatusChip">Checking...</span>
+    </div>
+    <div class="srow">
+      <div><div class="sl">Enable notifications</div><div class="sd">In-app alerts and optional browser popups</div></div>
+      <select id="s-notify-enabled"><option>YES</option><option>NO</option></select>
+    </div>
+    <div class="srow">
+      <div><div class="sl">Low stock alerts</div></div>
+      <select id="s-notify-low"><option>YES</option><option>NO</option></select>
+    </div>
+    <div class="srow">
+      <div><div class="sl">Reward ready alerts</div></div>
+      <select id="s-notify-reward"><option>YES</option><option>NO</option></select>
+    </div>
+    <div class="srow">
+      <div><div class="sl">Inactive customer alerts</div></div>
+      <select id="s-notify-inactive"><option>YES</option><option>NO</option></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="requestNotificationAccess()">Enable on this device</button>
+      <button class="btn btn-teal btn-sm" style="flex:1" onclick="sendTestNotification()">Send test</button>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">&#9888;&#65039; Low Stock Warning Level</div>
@@ -712,6 +807,29 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
   </div>
 </div>
 
+<!-- CUSTOMER 360 OVERLAY -->
+<div class="overlay" id="customer360Overlay">
+  <div class="popup" style="max-width:420px;text-align:left;padding:22px">
+    <div id="customer360Content"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeCustomer360()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION CENTER -->
+<div class="overlay" id="notifOverlay">
+  <div class="popup" style="max-width:430px;text-align:left;padding:22px">
+    <h2 style="margin-bottom:6px">&#128276; Notification Center</h2>
+    <p style="margin-bottom:10px">Operational alerts for low stock, loyalty, and customer reactivation opportunities.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="clearNotifications()">Clear all</button>
+      <button class="btn btn-teal btn-sm" style="flex:1" onclick="closeNotifCenter()">Done</button>
+    </div>
+    <div class="notif-list" id="notifList"></div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -719,9 +837,12 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzEzfbRaw0tesxfpw1jGHakZVNlZg2rnwV2MXKUg5faA_u5eSNglHJk2YcoLGItMtBx/exec';
 const STORE_KEY  = 'cathelCreamyV3';
 const OUTBOX_KEY = STORE_KEY+'-outbox';
+const ALERTS_KEY = STORE_KEY+'-alerts';
 const API_TIMEOUT_MS = 7000;
 const FAST_BOOT_HIDE_MS = 260;
 const OUTBOX_RETRY_MS = 8000;
+const ALERT_SCAN_WINDOW_DAYS = 14;
+const ALERT_RECHECK_MS = 120000;
 const LOGO_SRC   = './client-logo.png';
 
 function defaultDB(){
@@ -731,7 +852,11 @@ function defaultDB(){
       active:'YES',
       lowStockAt:5,
       rewardMsg:'Hi! Your child has earned a FREE ice cream from Cathel Creamy! Collect at next school day.',
-      promoMsg:'Special offer from Cathel Creamy today! Reply YES to order. Limited stock!'
+      promoMsg:'Special offer from Cathel Creamy today! Reply YES to order. Limited stock!',
+      notifyEnabled:'YES',
+      notifyLowStock:'YES',
+      notifyRewards:'YES',
+      notifyInactive:'YES'
     },
     products:[
       {id:'PRD-01',name:'R6 Ice Cream',category:'Single',price:6,stock:50},
@@ -749,8 +874,14 @@ function defaultDB(){
 }
 let DB=(()=>{try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):defaultDB();}catch(e){return defaultDB();}})();
 if(!DB.settings.lowStockAt)DB.settings.lowStockAt=5;
+if(!DB.settings.notifyEnabled)DB.settings.notifyEnabled='YES';
+if(!DB.settings.notifyLowStock)DB.settings.notifyLowStock='YES';
+if(!DB.settings.notifyRewards)DB.settings.notifyRewards='YES';
+if(!DB.settings.notifyInactive)DB.settings.notifyInactive='YES';
 DB.customers.forEach(c=>{if(!c.qrId)c.qrId='CC-'+c.id;});
 function saveLocal(){try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}}
+let ALERTS=(()=>{try{const r=localStorage.getItem(ALERTS_KEY);return r?JSON.parse(r):[];}catch(e){return [];}})();
+function saveAlerts(){try{localStorage.setItem(ALERTS_KEY,JSON.stringify(ALERTS));}catch(e){}}
 
 // GOOGLE SHEETS
 // Robust sync layer: queue writes offline and replay when online.
@@ -765,6 +896,10 @@ function applySettingLocally(k,v){
   if(k==='loyaltyActive')DB.settings.active=v;
   if(k==='rewardMsg')DB.settings.rewardMsg=v;
   if(k==='promoMsg')DB.settings.promoMsg=v;
+  if(k==='notifyEnabled')DB.settings.notifyEnabled=v;
+  if(k==='notifyLowStock')DB.settings.notifyLowStock=v;
+  if(k==='notifyRewards')DB.settings.notifyRewards=v;
+  if(k==='notifyInactive')DB.settings.notifyInactive=v;
 }
 function mergeOutboxIntoDB(){
   OUTBOX.forEach(item=>{
@@ -885,6 +1020,8 @@ async function loadFromSheets(background=false){
     saveLocal();
     setSyncStatus(OUTBOX.length?'syncing':'ok');
     refreshVisibleScreen();
+    evaluateOperationalAlerts();
+    renderNotifCenter();
     if(!background){
       setLoadMsg('Ready');
       setTimeout(hideLoading,600);
@@ -895,6 +1032,8 @@ async function loadFromSheets(background=false){
     saveLocal();
     setSyncStatus('error');
     refreshVisibleScreen();
+    evaluateOperationalAlerts();
+    renderNotifCenter();
     if(!background){
       setLoadMsg('Offline - using saved data');
       toast('\u26A1 Using saved local data','rw');
@@ -920,8 +1059,16 @@ async function pushOrder(o){return pushAction('addOrder',o,true);}
 async function pushCustomer(c){return pushAction('addCustomer',c,true);}
 async function pushSetting(k,v){return pushAction('updateSettings',{key:k,value:v},false);}
 async function pushReward(r){return pushAction('logReward',r,false);}
-window.addEventListener('online',()=>{if(OUTBOX.length)toast('\uD83D\uDFE2 Back online - syncing queued changes','ok');flushOutbox();});
-window.addEventListener('offline',()=>{setSyncStatus('error');toast('\u26A0\uFE0F Offline mode - changes will sync later','rw');});
+window.addEventListener('online',()=>{
+  if(OUTBOX.length)toast('\uD83D\uDFE2 Back online - syncing queued changes','ok');
+  flushOutbox();
+  evaluateOperationalAlerts();
+});
+window.addEventListener('offline',()=>{
+  setSyncStatus('error');
+  toast('\u26A0\uFE0F Offline mode - changes will sync later','rw');
+  updateNotifBadge();
+});
 
 //  LOADING 
 function setLoadMsg(m){document.getElementById('loadingMsg').textContent=m;}
@@ -933,14 +1080,162 @@ function refreshVisibleScreen(){
   if(active==='sc-dash')renderDash();
   if(active==='sc-customers')renderCusts();
   if(active==='sc-settings')renderSettings();
-  if(active==='sc-broadcast'){updateBroadcastPreview();loadTemplate();}
+  if(active==='sc-broadcast'){renderPromoBrain();updateBroadcastPreview();loadTemplate();}
   if(active==='sc-report'){document.getElementById('reportDate').value=today();renderReport();}
+  updateNotifBadge();
 }
 function primeLocalBoot(){
   renderRecent();
   renderLowStockAlert();
   setLoadMsg('Opening saved data...');
   setTimeout(hideLoading,FAST_BOOT_HIDE_MS);
+}
+
+// CORE ANALYTICS HELPERS
+function escHtml(v){
+  return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function parseDateSafe(s){
+  if(!s)return null;
+  const d=new Date(String(s).substring(0,10)+'T12:00:00');
+  return Number.isNaN(d.getTime())?null:d;
+}
+function daysSince(dateStr){
+  const d=parseDateSafe(dateStr);
+  if(!d)return 999;
+  const now=new Date();
+  const ms=now.getTime()-d.getTime();
+  return Math.max(0,Math.floor(ms/86400000));
+}
+function customerOrders(cust){
+  return DB.orders.filter(o=>o.parentName===cust.parentName);
+}
+function customerSpend(cust){
+  return customerOrders(cust).reduce((s,o)=>s+(Number(o.total)||0),0);
+}
+function customerLastOrder(cust){
+  return customerOrders(cust).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0]||null;
+}
+function customerFavoriteProduct(cust){
+  const bag={};
+  customerOrders(cust).forEach(o=>{bag[o.product]=(bag[o.product]||0)+(Number(o.qty)||0);});
+  const top=Object.entries(bag).sort((a,b)=>b[1]-a[1])[0];
+  return top?{name:top[0],qty:top[1]}:null;
+}
+
+// PROMO BRAIN + FREE BROADCAST ASSIST
+let promoBrainCache={targets:[],segment:'No data',reason:'No customers with phone numbers yet.',generatedAt:0};
+function buildPromoBrain(){
+  const withPhone=DB.customers.filter(c=>String(c.phone||'').trim());
+  if(!withPhone.length){
+    return {targets:[],segment:'No data',reason:'Add WhatsApp numbers to customers to unlock recommendations.',generatedAt:Date.now()};
+  }
+  const threshold=Number(DB.settings.threshold)||10;
+  const spendValues=withPhone.map(c=>customerSpend(c));
+  const avgSpend=spendValues.length?spendValues.reduce((a,b)=>a+b,0)/spendValues.length:0;
+  const scored=withPhone.map(c=>{
+    const orders=customerOrders(c);
+    const orderCount=orders.length;
+    const spend=orders.reduce((s,o)=>s+(Number(o.total)||0),0);
+    const last=customerLastOrder(c);
+    const inactiveDays=last?daysSince(last.date):999;
+    const reasons=[];
+    let score=0;
+    if(orderCount===0){score+=5;reasons.push('new lead');}
+    if(inactiveDays>=ALERT_SCAN_WINDOW_DAYS){score+=4;reasons.push(inactiveDays+'d inactive');}
+    if(orderCount>=Math.max(1,threshold-2)&&orderCount<threshold){score+=3;reasons.push('close to reward');}
+    if(orderCount>=threshold){score+=1;reasons.push('reward follow-up');}
+    if(avgSpend>0&&spend>=avgSpend*1.2){score+=2;reasons.push('high spender');}
+    if(score===0){score=1;reasons.push('general promo');}
+    return {
+      id:c.id,parentName:c.parentName,phone:c.phone,score,reasons,
+      shortReason:reasons.slice(0,2).join(', '),
+      orderCount,spend,inactiveDays
+    };
+  }).sort((a,b)=>b.score-a.score||b.inactiveDays-a.inactiveDays||b.spend-a.spend);
+
+  let targets=scored.filter(s=>s.score>=4);
+  if(!targets.length)targets=scored.slice(0,Math.min(30,scored.length));
+
+  const reasonBuckets={};
+  targets.forEach(t=>t.reasons.forEach(r=>{reasonBuckets[r]=(reasonBuckets[r]||0)+1;}));
+  const topReason=Object.entries(reasonBuckets).sort((a,b)=>b[1]-a[1])[0]?.[0]||'mixed opportunity';
+  const segment=topReason.includes('inactive')?'Win-back audience':topReason.includes('close to reward')?'Near-reward push':'High intent audience';
+  return {
+    targets,
+    segment,
+    reason:`${targets.length} customer${targets.length===1?'':'s'} selected. Main signal: ${topReason}.`,
+    generatedAt:Date.now()
+  };
+}
+function renderPromoBrain(){
+  const summaryEl=document.getElementById('promoBrainSummary');
+  const listEl=document.getElementById('promoBrainList');
+  const tagEl=document.getElementById('promoBrainTag');
+  if(!summaryEl||!listEl||!tagEl)return;
+  promoBrainCache=buildPromoBrain();
+  summaryEl.textContent=promoBrainCache.reason;
+  tagEl.textContent=promoBrainCache.segment;
+  if(!promoBrainCache.targets.length){
+    listEl.innerHTML='<div class="brain-item"><strong>No targets yet</strong><span>Add customers and sales history.</span></div>';
+    return;
+  }
+  listEl.innerHTML=promoBrainCache.targets.slice(0,5).map(t=>
+    `<div class="brain-item"><strong>${escHtml(t.parentName)}</strong><span>${escHtml(t.shortReason)}</span></div>`
+  ).join('');
+}
+function applyPromoBrain(){
+  const filter=document.getElementById('bcast-filter');
+  if(filter)filter.value='brain';
+  updateBroadcastPreview();
+  toast('\u2705 Promo Brain targets applied','ok');
+}
+async function copyTextToClipboard(text,okMsg){
+  if(!text){toast('Nothing to copy','er');return false;}
+  try{
+    if(navigator.clipboard&&window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+    }else{
+      const ta=document.createElement('textarea');
+      ta.value=text;
+      ta.style.position='fixed';
+      ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    }
+    toast(okMsg||'\u2705 Copied','ok');
+    return true;
+  }catch(e){
+    toast('Copy failed on this browser','er');
+    return false;
+  }
+}
+function copyBroadcastMessage(){
+  const msg=document.getElementById('bcast-msg')?.value.trim()||'';
+  return copyTextToClipboard(msg,'\u2705 Message copied');
+}
+function copyBroadcastNumbers(){
+  const recipients=getRecipients();
+  const numbers=recipients.map(c=>String(c.phone||'').replace(/\s+/g,' ').trim()).join('\n');
+  return copyTextToClipboard(numbers,`\u2705 ${recipients.length} number${recipients.length===1?'':'s'} copied`);
+}
+function copyBroadcastPack(){
+  const recipients=getRecipients();
+  const msg=document.getElementById('bcast-msg')?.value.trim()||'';
+  const lines=[
+    'Cathel Creamy Broadcast Pack',
+    `Targets: ${recipients.length}`,
+    '',
+    'Numbers:',
+    ...recipients.map(c=>`${c.parentName} - ${c.phone}`),
+    '',
+    'Message:',
+    msg
+  ];
+  return copyTextToClipboard(lines.join('\n'),'\u2705 Broadcast pack copied');
 }
 
 //  NAV 
@@ -956,7 +1251,7 @@ function go(name,btn){
   if(name==='customers')renderCusts();
   if(name==='settings') renderSettings();
   if(name==='sell')     {renderRecent();renderLowStockAlert();}
-  if(name==='broadcast'){updateBroadcastPreview();loadTemplate();}
+  if(name==='broadcast'){renderPromoBrain();updateBroadcastPreview();loadTemplate();}
   if(name==='report')   {document.getElementById('reportDate').value=today();renderReport();}
 }
 
@@ -1086,6 +1381,7 @@ function recordSale(){
   const cust=selCust;cancelFlow();
   if(cnt===DB.settings.threshold)showRewardPopup(cust,cnt);
   else{const rem=DB.settings.threshold-cnt;toast(`\u2705 R${order.total} recorded! ${rem>0?rem+' more to reward':''}`, 'ok');}
+  evaluateOperationalAlerts();
 }
 function showRewardPopup(cust,cnt){
   document.getElementById('popSub').textContent=`${cust.parentName} has reached ${cnt} purchases!`;
@@ -1097,6 +1393,7 @@ function showRewardPopup(cust,cnt){
   document.getElementById('rewardOverlay').classList.add('show');
   const reward={date:today(),parentName:cust.parentName,childName:cust.childName,type:'Free Ice Cream'};
   DB.rewardsLog.push(reward);saveLocal();pushReward(reward);
+  addAppAlert('reward',`Reward unlocked: ${cust.parentName}`,`${cust.childName||'Customer'} reached ${cnt}/${DB.settings.threshold}.`,`reward-popup:${cust.id}:${today()}`);
 }
 function closeReward(){document.getElementById('rewardOverlay').classList.remove('show');toast('\uD83C\uDF89 Reward logged!','rw');}
 function renderRecent(){
@@ -1201,7 +1498,7 @@ function renderDash(){
   set('d-rearned',Object.values(co).filter(v=>v>=thresh).length);
   set('d-rpend',Object.values(co).filter(v=>v<thresh).length);
   set('d-thresh',thresh+' buys');
-  renderRevenueChart();renderProductChart();renderGradeChart();renderStockStatus();renderTopBuyers();
+  renderRevenueChart();renderProductChart();renderGradeChart();renderStockStatus();renderTopBuyers();renderDashInsights();
 }
 
 function getLast7Days(){
@@ -1305,6 +1602,67 @@ function renderTopBuyers(){
       </div>`).join('')
     :'<div class="empty" style="padding:20px"><p>No orders yet</p></div>';
 }
+function renderDashInsights(){
+  const host=document.getElementById('dashInsights');
+  if(!host)return;
+  const now=new Date();
+  const revenueForDays=(startOffset,endOffset)=>{
+    const from=new Date(now);from.setDate(now.getDate()-startOffset);
+    const to=new Date(now);to.setDate(now.getDate()-endOffset);
+    return DB.orders.filter(o=>{
+      if(o.status!=='Paid')return false;
+      const d=parseDateSafe(o.date);
+      return d&&d>=from&&d<=to;
+    }).reduce((s,o)=>s+(Number(o.total)||0),0);
+  };
+  const curr7=revenueForDays(6,0);
+  const prev7=revenueForDays(13,7);
+  const trendPct=prev7>0?Math.round(((curr7-prev7)/prev7)*100):(curr7>0?100:0);
+  const trendClass=trendPct<0?'risk':'';
+  const trendText=trendPct>=0?`Revenue up ${trendPct}% vs previous 7 days.`:`Revenue down ${Math.abs(trendPct)}% vs previous 7 days.`;
+
+  const threshold=Number(DB.settings.threshold)||10;
+  const co=orderCounts();
+  const ready=DB.customers.filter(c=>(co[c.parentName]||0)>=threshold).length;
+  const close=DB.customers.filter(c=>{const n=co[c.parentName]||0;return n>=Math.max(1,threshold-2)&&n<threshold;}).length;
+
+  const inactive=DB.customers.filter(c=>{
+    const last=customerLastOrder(c);
+    const days=last?daysSince(last.date):999;
+    return days>=ALERT_SCAN_WINDOW_DAYS;
+  }).length;
+  const inactiveClass=inactive>0?'warn':'';
+
+  const byProduct={};
+  DB.orders.forEach(o=>{byProduct[o.product]=(byProduct[o.product]||0)+(Number(o.qty)||0);});
+  const topProduct=Object.entries(byProduct).sort((a,b)=>b[1]-a[1])[0];
+  const topProductText=topProduct?`${topProduct[0]} leads with ${topProduct[1]} units sold.`:'No product trend yet.';
+
+  const activeCustomers=new Set(DB.orders.map(o=>o.parentName));
+  const repeatCustomers=[...activeCustomers].filter(name=>(co[name]||0)>1).length;
+  const repeatRate=activeCustomers.size?Math.round((repeatCustomers/activeCustomers.size)*100):0;
+
+  host.innerHTML=[
+    `<div class="insight-item ${trendClass}">
+      <div class="insight-dot"></div>
+      <div><div class="insight-title">${escHtml(trendText)}</div><div class="insight-sub">Last 7 days: R${curr7} | Previous: R${prev7}</div></div>
+    </div>`,
+    `<div class="insight-item ${inactiveClass}">
+      <div class="insight-dot"></div>
+      <div><div class="insight-title">${inactive} inactive customer${inactive===1?'':'s'} need a win-back promo.</div><div class="insight-sub">No purchase in ${ALERT_SCAN_WINDOW_DAYS}+ days.</div></div>
+    </div>`,
+    `<div class="insight-item">
+      <div class="insight-dot"></div>
+      <div><div class="insight-title">${ready} reward-ready and ${close} near-reward customers.</div><div class="insight-sub">Send reward reminders to increase repeat purchases.</div></div>
+    </div>`,
+    `<div class="insight-item">
+      <div class="insight-dot"></div>
+      <div><div class="insight-title">${escHtml(topProductText)}</div><div class="insight-sub">Repeat rate: ${repeatRate}% of active customers.</div></div>
+    </div>`
+  ].join('');
+  const stamp=document.getElementById('dashInsightsTime');
+  if(stamp)stamp.textContent='Updated '+new Date().toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+}
 
 //  CUSTOMERS 
 function renderCusts(){
@@ -1313,19 +1671,25 @@ function renderCusts(){
   const fx=DB.customers.filter(c=>c.parentName.toLowerCase().includes(q)||c.childName.toLowerCase().includes(q));
   const el=document.getElementById('custList');
   if(!fx.length){el.innerHTML='<div class="empty"><div class="ei">&#128101;</div><h3>No customers found</h3></div>';return;}
+  const threshold=Number(DB.settings.threshold)||10;
   el.innerHTML=fx.map(c=>{
-    const n=co[c.parentName]||0,done=n>=DB.settings.threshold;
+    const n=co[c.parentName]||0,done=n>=threshold;
+    const last=customerLastOrder(c);
+    const idle=last?daysSince(last.date):999;
+    const action=done?'Reward message':(idle>=ALERT_SCAN_WINDOW_DAYS?'Win-back promo':(n>=Math.max(1,threshold-2)?'Push to reward':'General follow-up'));
     return `<div class="card" style="margin-bottom:10px;padding:15px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div style="font-weight:700;font-size:14px">${c.parentName}</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:2px">${c.childName} &#8226; ${c.grade}</div>
-          <div style="font-size:11px;color:var(--text-3)">${c.phone||'No number'}</div>
+          <div style="font-weight:700;font-size:14px">${escHtml(c.parentName)}</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px">${escHtml(c.childName)} &#8226; ${escHtml(c.grade)}</div>
+          <div style="font-size:11px;color:var(--text-3)">${escHtml(c.phone||'No number')}</div>
+          <div style="font-size:10px;color:var(--text-3);margin-top:6px">Next action: ${escHtml(action)}</div>
         </div>
         <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
           <span class="badge ${done?'gold':''}">${done?'&#127881; Reward!':n+' orders'}</span>
-          <button class="btn btn-teal btn-sm" onclick='showQRCode(${JSON.stringify(c)})'>&#128247; QR Code</button>
-          <button class="btn btn-ghost btn-sm" onclick='showLoyaltyCard(${JSON.stringify(c)})'>&#127903; Loyalty Card</button>
+          <button class="btn btn-teal btn-sm" onclick="showCustomer360ById('${c.id}')">&#129504; 360 View</button>
+          <button class="btn btn-ghost btn-sm" onclick="showQRCodeById('${c.id}')">&#128247; QR Code</button>
+          <button class="btn btn-ghost btn-sm" onclick="showLoyaltyCardById('${c.id}')">&#127903; Loyalty Card</button>
           ${c.phone?`<a href="https://wa.me/${c.phone.replace(/\D/g,'')}?text=${encodeURIComponent(DB.settings.rewardMsg)}" target="_blank" style="font-size:11px;font-weight:700;color:#25D366;text-decoration:none">&#128172; WhatsApp</a>`:''}
         </div>
       </div>
@@ -1359,6 +1723,89 @@ function showQRCode(cust){
   document.getElementById('qrOverlay').classList.add('show');
 }
 function closeQR(){document.getElementById('qrOverlay').classList.remove('show');}
+function findCustomerById(id){return DB.customers.find(c=>String(c.id)===String(id));}
+function showQRCodeById(id){
+  const cust=findCustomerById(id);
+  if(!cust){toast('Customer not found','er');return;}
+  showQRCode(cust);
+}
+function showLoyaltyCardById(id){
+  const cust=findCustomerById(id);
+  if(!cust){toast('Customer not found','er');return;}
+  showLoyaltyCard(cust);
+}
+function nextBestActionForCustomer(cust,count,inactiveDays){
+  const threshold=Number(DB.settings.threshold)||10;
+  if(count>=threshold){
+    return {
+      title:'Reward ready',
+      sub:'Send reward confirmation and invite the next purchase streak.',
+      msg:DB.settings.rewardMsg
+    };
+  }
+  if(inactiveDays>=ALERT_SCAN_WINDOW_DAYS){
+    return {
+      title:'Reactivation promo',
+      sub:`No purchase in ${inactiveDays} days. Send a win-back offer today.`,
+      msg:DB.settings.promoMsg
+    };
+  }
+  if(count>=Math.max(1,threshold-2)){
+    return {
+      title:'Push to threshold',
+      sub:`Only ${threshold-count} purchase${threshold-count===1?'':'s'} left for reward.`,
+      msg:'You are so close to a free ice cream! Buy again and unlock your reward.'
+    };
+  }
+  return {
+    title:'Nurture relationship',
+    sub:'Share a small promo to keep this customer active.',
+    msg:DB.settings.promoMsg
+  };
+}
+function showCustomer360ById(id){
+  const cust=findCustomerById(id);
+  if(!cust){toast('Customer not found','er');return;}
+  const orders=customerOrders(cust).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const count=orders.length;
+  const total=orders.reduce((s,o)=>s+(Number(o.total)||0),0);
+  const avg=count?Math.round(total/count):0;
+  const last=orders[0]||null;
+  const inactiveDays=last?daysSince(last.date):999;
+  const fav=customerFavoriteProduct(cust);
+  const action=nextBestActionForCustomer(cust,count,inactiveDays);
+  const waLink=cust.phone?`https://wa.me/${cust.phone.replace(/\D/g,'')}?text=${encodeURIComponent(action.msg)}`:'#';
+  const timeline=orders.slice(0,8).map(o=>{
+    const dt=parseDateSafe(o.date);
+    const dLabel=dt?dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short'}):o.date;
+    return `<div class="timeline-item"><div class="t-left">${escHtml(dLabel)} &#8226; ${escHtml(o.product)} x${Number(o.qty)||1}</div><div class="t-right">R${Number(o.total)||0}</div></div>`;
+  }).join('');
+  document.getElementById('customer360Content').innerHTML=`
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+      <div>
+        <div style="font-family:'Baloo 2','Segoe UI',Tahoma,sans-serif;font-size:22px;font-weight:800;color:var(--teal)">${escHtml(cust.parentName)}</div>
+        <div style="font-size:12px;color:var(--text-3)">${escHtml(cust.childName)} &#8226; ${escHtml(cust.grade)}</div>
+      </div>
+      <span class="badge">${count} orders</span>
+    </div>
+    <div class="mini-kpis">
+      <div class="mini-kpi"><div class="k">R${total}</div><div class="l">Lifetime Spend</div></div>
+      <div class="mini-kpi"><div class="k">R${avg}</div><div class="l">Avg Basket</div></div>
+      <div class="mini-kpi"><div class="k">${inactiveDays===999?'Never':inactiveDays+'d'}</div><div class="l">Last Activity</div></div>
+      <div class="mini-kpi"><div class="k">${escHtml(fav?fav.name:'-')}</div><div class="l">Favorite Product</div></div>
+    </div>
+    <div class="card" style="margin:0 0 8px 0;padding:12px;border-radius:12px">
+      <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px">Next Best Action</div>
+      <div style="font-weight:700;color:var(--text);margin-top:2px">${escHtml(action.title)}</div>
+      <div style="font-size:12px;color:var(--text-2);margin-top:4px">${escHtml(action.sub)}</div>
+      ${cust.phone?`<a href="${waLink}" target="_blank" class="btn btn-wa btn-sm" style="margin-top:8px;text-decoration:none">\uD83D\uDCF2 Message on WhatsApp</a>`:'<div style="font-size:11px;color:var(--text-3);margin-top:6px">No WhatsApp number saved.</div>'}
+    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--teal);margin-top:10px">Recent Timeline</div>
+    <div class="timeline">${timeline||'<div class="empty" style="padding:16px"><p>No sales recorded yet</p></div>'}</div>
+  `;
+  document.getElementById('customer360Overlay').classList.add('show');
+}
+function closeCustomer360(){document.getElementById('customer360Overlay').classList.remove('show');}
 
 //  WHATSAPP BROADCAST 
 function getRecipients(){
@@ -1367,12 +1814,17 @@ function getRecipients(){
   const thresh=DB.settings.threshold;
   const weekAgo=new Date();weekAgo.setDate(weekAgo.getDate()-7);
   const weekAgoStr=weekAgo.toISOString().split('T')[0];
+  if(filter==='brain'){
+    const pick=(promoBrainCache.targets?.length?promoBrainCache:buildPromoBrain()).targets;
+    const ids=new Set(pick.map(t=>String(t.id)));
+    return DB.customers.filter(c=>ids.has(String(c.id))&&c.phone);
+  }
   return DB.customers.filter(c=>{
     if(!c.phone)return false;
     const n=co[c.parentName]||0;
     if(filter==='all')return true;
     if(filter==='reward')return n>=thresh;
-    if(filter==='close')return n>=8&&n<thresh;
+    if(filter==='close')return n>=Math.max(1,thresh-2)&&n<thresh;
     if(filter==='inactive'){
       const lastOrder=DB.orders.filter(o=>o.parentName===c.parentName).sort((a,b)=>b.date.localeCompare(a.date))[0];
       return !lastOrder||lastOrder.date<weekAgoStr;
@@ -1387,29 +1839,47 @@ function loadTemplate(){
   updateBroadcastPreview();
 }
 function updateBroadcastPreview(){
+  renderPromoBrain();
   const recipients=getRecipients();
   set('bcastCount',recipients.length);
   const msg=document.getElementById('bcast-msg')?.value||'';
   document.getElementById('bcastPreview').textContent=msg||'Your message will appear here...';
+  const label=document.querySelector('.recipient-label');
+  if(label){
+    const sample=recipients.slice(0,3).map(c=>c.parentName).join(', ');
+    label.textContent=recipients.length?`Selected: ${sample}${recipients.length>3?' ...':''}`:'No recipients selected';
+  }
 }
-let broadcastQueue=[],broadcastIndex=0;
+let broadcastQueue=[],broadcastIndex=0,broadcastMessage='',broadcastTargetSig='';
 function startBroadcast(){
   const recipients=getRecipients();
   const msg=document.getElementById('bcast-msg').value.trim();
   if(!msg){toast('Please enter a message first','er');return;}
   if(!recipients.length){toast('No recipients match this filter','er');return;}
-  broadcastQueue=recipients;broadcastIndex=0;
+  const nextSig=recipients.map(c=>c.id).join('|');
+  if(nextSig!==broadcastTargetSig||msg!==broadcastMessage||broadcastIndex>=broadcastQueue.length){
+    broadcastQueue=recipients;
+    broadcastIndex=0;
+    broadcastMessage=msg;
+    broadcastTargetSig=nextSig;
+  }
   sendNextBroadcast(msg);
 }
 function sendNextBroadcast(msg){
-  if(broadcastIndex>=broadcastQueue.length){toast(`\u2705 Sent to ${broadcastQueue.length} customers!`,'ok');return;}
+  if(broadcastIndex>=broadcastQueue.length){
+    toast(`\u2705 Completed ${broadcastQueue.length} contacts`,'ok');
+    broadcastQueue=[];broadcastIndex=0;broadcastMessage='';broadcastTargetSig='';
+    return;
+  }
   const c=broadcastQueue[broadcastIndex];
   const url=`https://wa.me/${c.phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
   window.open(url,'_blank');
   broadcastIndex++;
   if(broadcastIndex<broadcastQueue.length){
-    toast(`\uD83D\uDCF2 ${broadcastIndex}/${broadcastQueue.length} sent - tap again for next`,'ok');
-  }else{toast(`\u2705 All ${broadcastQueue.length} messages sent!`,'ok');}
+    toast(`\uD83D\uDCF2 Opened ${broadcastIndex}/${broadcastQueue.length}. Tap Open WhatsApp again for next contact.`, 'ok');
+  }else{
+    toast(`\u2705 Last contact opened (${broadcastQueue.length}/${broadcastQueue.length})`,'ok');
+  }
 }
 
 //  END OF DAY REPORT 
@@ -1467,6 +1937,11 @@ function renderSettings(){
   document.getElementById('s-rmsg').value=DB.settings.rewardMsg;
   document.getElementById('s-pmsg').value=DB.settings.promoMsg;
   document.getElementById('s-lowstock').value=DB.settings.lowStockAt||5;
+  document.getElementById('s-notify-enabled').value=DB.settings.notifyEnabled||'YES';
+  document.getElementById('s-notify-low').value=DB.settings.notifyLowStock||'YES';
+  document.getElementById('s-notify-reward').value=DB.settings.notifyRewards||'YES';
+  document.getElementById('s-notify-inactive').value=DB.settings.notifyInactive||'YES';
+  updateNotifStatusChip();
   document.getElementById('prodSettings').innerHTML=DB.products.map((p,i)=>
     `<div style="display:flex;gap:7px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
       <input value="${p.name}" onchange="DB.products[${i}].name=this.value" style="flex:2;min-width:90px;padding:8px 10px;border:2px solid var(--border);border-radius:9px;font-family:'Poppins';font-size:13px;outline:none">
@@ -1485,9 +1960,19 @@ function saveSettings(){
   DB.settings.rewardMsg=document.getElementById('s-rmsg').value;
   DB.settings.promoMsg=document.getElementById('s-pmsg').value;
   DB.settings.lowStockAt=parseInt(document.getElementById('s-lowstock').value)||5;
+  DB.settings.notifyEnabled=document.getElementById('s-notify-enabled').value;
+  DB.settings.notifyLowStock=document.getElementById('s-notify-low').value;
+  DB.settings.notifyRewards=document.getElementById('s-notify-reward').value;
+  DB.settings.notifyInactive=document.getElementById('s-notify-inactive').value;
   saveLocal();
   pushSetting('threshold',DB.settings.threshold);pushSetting('loyaltyActive',DB.settings.active);
   pushSetting('rewardMsg',DB.settings.rewardMsg);pushSetting('promoMsg',DB.settings.promoMsg);
+  pushSetting('notifyEnabled',DB.settings.notifyEnabled);
+  pushSetting('notifyLowStock',DB.settings.notifyLowStock);
+  pushSetting('notifyRewards',DB.settings.notifyRewards);
+  pushSetting('notifyInactive',DB.settings.notifyInactive);
+  evaluateOperationalAlerts();
+  updateNotifStatusChip();
   toast('\u2705 Settings saved!','ok');
 }
 
@@ -1500,10 +1985,217 @@ function set(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 let _tt;
 function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast up '+type;clearTimeout(_tt);_tt=setTimeout(()=>t.className='toast',3200);}
 
+// NOTIFICATIONS
+function notificationCapability(){
+  if(!('Notification' in window))return 'unsupported';
+  return Notification.permission;
+}
+function updateNotifBadge(){
+  const badge=document.getElementById('notifBadge');
+  if(!badge)return;
+  const unread=ALERTS.filter(a=>!a.read).length;
+  if(unread>0){
+    badge.style.display='inline-flex';
+    badge.textContent=String(Math.min(99,unread));
+  }else{
+    badge.style.display='none';
+  }
+}
+function updateNotifStatusChip(){
+  const chip=document.getElementById('notifStatusChip');
+  if(!chip)return;
+  const state=notificationCapability();
+  chip.className='badge';
+  if(state==='granted'){chip.textContent='Allowed';chip.classList.add('green');}
+  else if(state==='denied'){chip.textContent='Blocked';chip.classList.add('red');}
+  else if(state==='default'){chip.textContent='Not enabled';}
+  else{chip.textContent='Unsupported';chip.classList.add('red');}
+}
+function formatAlertTime(ts){
+  const d=new Date(ts||Date.now());
+  return d.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+}
+function renderNotifCenter(){
+  const list=document.getElementById('notifList');
+  if(!list)return;
+  if(!ALERTS.length){
+    list.innerHTML='<div class="empty" style="padding:22px"><div class="ei">&#128276;</div><h3>No notifications yet</h3><p>Alerts will appear as your app activity grows.</p></div>';
+    return;
+  }
+  list.innerHTML=ALERTS.slice(0,80).map(a=>`<div class="notif-item ${a.read?'':'unread'}">
+    <h4>${escHtml(a.title||'Alert')}</h4>
+    <p>${escHtml(a.message||'')}</p>
+    <div class="meta"><span>${escHtml(a.type||'info')}</span><span>${formatAlertTime(a.ts)}</span></div>
+  </div>`).join('');
+}
+function openNotifCenter(){
+  ALERTS=ALERTS.map(a=>({...a,read:true}));
+  saveAlerts();
+  updateNotifBadge();
+  renderNotifCenter();
+  document.getElementById('notifOverlay').classList.add('show');
+}
+function closeNotifCenter(){document.getElementById('notifOverlay').classList.remove('show');}
+function clearNotifications(){
+  ALERTS=[];
+  saveAlerts();
+  updateNotifBadge();
+  renderNotifCenter();
+  toast('\u2705 Notifications cleared','ok');
+}
+function notifyDevice(title,body){
+  if(DB.settings.notifyEnabled!=='YES')return;
+  if(notificationCapability()!=='granted')return;
+  try{
+    new Notification(title,{body,icon:'./icons/icon-192x192.png',badge:'./icons/icon-192x192.png',tag:'cathel-alert'});
+  }catch(e){}
+}
+function addAppAlert(type,title,message,dedupeKey){
+  if(!title||!message)return false;
+  if(dedupeKey&&ALERTS.some(a=>a.dedupeKey===dedupeKey))return false;
+  ALERTS.unshift({
+    id:'AL-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    type:type||'info',
+    title,
+    message,
+    dedupeKey:dedupeKey||'',
+    ts:Date.now(),
+    read:false
+  });
+  if(ALERTS.length>120)ALERTS=ALERTS.slice(0,120);
+  saveAlerts();
+  updateNotifBadge();
+  renderNotifCenter();
+  notifyDevice(title,message);
+  return true;
+}
+async function requestNotificationAccess(){
+  if(notificationCapability()==='unsupported'){
+    toast('This browser does not support notifications','er');
+    updateNotifStatusChip();
+    return;
+  }
+  try{
+    const perm=await Notification.requestPermission();
+    updateNotifStatusChip();
+    if(perm==='granted'){
+      toast('\u2705 Notifications enabled on this device','ok');
+      if(document.getElementById('s-notify-enabled'))document.getElementById('s-notify-enabled').value='YES';
+      DB.settings.notifyEnabled='YES';
+      saveLocal();
+    }else{
+      toast('\u26A0\uFE0F Notification permission not granted','rw');
+    }
+  }catch(e){
+    toast('Could not request notification permission','er');
+  }
+}
+function sendTestNotification(){
+  const msg='Cathel Creamy alerts are set up and ready.';
+  addAppAlert('system','Notification test',msg,'');
+  if(notificationCapability()==='granted')notifyDevice('Cathel Creamy',msg);
+  toast('\u2705 Test alert created','ok');
+}
+function evaluateOperationalAlerts(){
+  if(DB.settings.notifyEnabled!=='YES'){
+    updateNotifBadge();
+    return;
+  }
+  const day=today();
+  const threshold=Number(DB.settings.threshold)||10;
+
+  if(DB.settings.notifyLowStock==='YES'){
+    const lowAt=Number(DB.settings.lowStockAt)||5;
+    DB.products.forEach(p=>{
+      const sold=DB.orders.filter(o=>o.product===p.name).reduce((s,o)=>s+(Number(o.qty)||0),0);
+      const rem=Math.max(0,(Number(p.stock)||0)-sold);
+      if(rem<=lowAt){
+        addAppAlert('stock',`Low stock: ${p.name}`,`${rem} left. Restock soon to avoid missed sales.`,`stock:${p.id}:${day}`);
+      }
+    });
+  }
+
+  if(DB.settings.notifyRewards==='YES'){
+    const co=orderCounts();
+    DB.customers.forEach(c=>{
+      const n=co[c.parentName]||0;
+      if(n>=threshold){
+        addAppAlert('reward',`Reward ready: ${c.parentName}`,`${c.childName||'Customer'} is at ${n}/${threshold}. Send reward message.`,`reward:${c.id}:${day}`);
+      }
+    });
+  }
+
+  if(DB.settings.notifyInactive==='YES'){
+    const inactive=DB.customers.filter(c=>{
+      const last=customerLastOrder(c);
+      return (last?daysSince(last.date):999)>=ALERT_SCAN_WINDOW_DAYS;
+    });
+    if(inactive.length){
+      const names=inactive.slice(0,3).map(c=>c.parentName).join(', ');
+      addAppAlert('inactive','Win-back targets ready',`${inactive.length} inactive customers (${names}${inactive.length>3?', ...':''}).`,`inactive:${day}`);
+    }
+  }
+  updateNotifBadge();
+}
+
 //  PWA 
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const btn=document.getElementById('installBtn');if(btn)btn.style.display='flex';});
-function installApp(){if(!deferredPrompt){toast('\uD83D\uDCF1 Tap Share -> Add to Home Screen','');return;}deferredPrompt.prompt();deferredPrompt.userChoice.then(c=>{if(c.outcome==='accepted')toast('\u2705 App installed!','ok');deferredPrompt=null;const btn=document.getElementById('installBtn');if(btn)btn.style.display='none';});}
+function isStandaloneMode(){
+  const mq=window.matchMedia?window.matchMedia('(display-mode: standalone)').matches:false;
+  const mqFs=window.matchMedia?window.matchMedia('(display-mode: fullscreen)').matches:false;
+  const iosStandalone=window.navigator&&window.navigator.standalone===true;
+  return !!(mq||mqFs||iosStandalone);
+}
+function isIOSLike(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent||'');
+}
+function refreshInstallButton(){
+  const btn=document.getElementById('installBtn');
+  if(!btn)return;
+  if(isStandaloneMode()){
+    btn.style.display='none';
+    return;
+  }
+  if(deferredPrompt||isIOSLike()){
+    btn.style.display='flex';
+    return;
+  }
+  btn.style.display='none';
+}
+if(window.matchMedia){
+  const smq=window.matchMedia('(display-mode: standalone)');
+  if(smq&&smq.addEventListener)smq.addEventListener('change',refreshInstallButton);
+}
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  refreshInstallButton();
+});
+window.addEventListener('appinstalled',()=>{
+  deferredPrompt=null;
+  refreshInstallButton();
+  toast('\u2705 App installed! Open it from your home screen.','ok');
+});
+function installApp(){
+  if(isStandaloneMode()){
+    toast('\u2705 App already installed on this device','ok');
+    return;
+  }
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(c=>{
+      if(c.outcome==='accepted')toast('\u2705 App installed!','ok');
+      deferredPrompt=null;
+      refreshInstallButton();
+    });
+    return;
+  }
+  if(isIOSLike()){
+    toast('\uD83D\uDCF1 iPhone: tap Share then Add to Home Screen','rw');
+    return;
+  }
+  toast('\uD83D\uDCF1 Install option not ready. Reload once and try again.','rw');
+}
 function verifyRuntimeDependencies(){
   const missing=[];
   if(typeof Html5Qrcode==='undefined')missing.push('scanner');
@@ -1531,6 +2223,12 @@ document.getElementById('hdrDate').innerHTML=
   new Date().toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
 verifyRuntimeDependencies();
 setSyncStatus(navigator.onLine?(OUTBOX.length?'syncing':'ok'):'error');
+renderNotifCenter();
+updateNotifBadge();
+updateNotifStatusChip();
+evaluateOperationalAlerts();
+setInterval(evaluateOperationalAlerts,ALERT_RECHECK_MS);
+refreshInstallButton();
 primeLocalBoot();
 loadFromSheets(true);
 </script>

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "cathel-creamy-v11";
+const CACHE_VERSION = "cathel-creamy-v13";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const OFFLINE_FALLBACK_URL = new URL("./index.html", self.location.href).toString();
@@ -6,6 +6,7 @@ const OFFLINE_FALLBACK_URL = new URL("./index.html", self.location.href).toStrin
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./index.html?source=pwa",
   "./manifest.json",
   "./client-logo.png",
   "./icons/icon-72x72.png",
