@@ -114,18 +114,26 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 .loading-screen{position:fixed;inset:0;z-index:999;background:
   radial-gradient(700px 300px at 75% 10%,rgba(235,206,141,.35),transparent 60%),
   linear-gradient(160deg,var(--teal),var(--teal-d));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
-  padding:calc(14px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
+  padding:calc(14px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));overflow:hidden}
+.loading-brand-bg{position:absolute;inset:0;pointer-events:none;opacity:.32;transition:opacity .35s}
+.loading-brand-bg.out{opacity:0}
+.loading-brand-bg img{width:100%;height:100%;object-fit:cover;display:block;mix-blend-mode:screen;filter:saturate(1.08) contrast(1.1) brightness(.72);animation:bgZoom 9s ease-in-out infinite alternate}
+.loading-brand-bg::after{content:"";position:absolute;inset:0;background:
+  radial-gradient(800px 300px at 10% 10%,rgba(0,184,255,.28),transparent 55%),
+  linear-gradient(160deg,rgba(7,30,53,.68),rgba(9,49,82,.52),rgba(45,138,158,.33))}
+.loading-shell{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:12px}
 .loading-screen .logo{width:190px;height:124px;border-radius:0;background:transparent;overflow:visible;box-shadow:none;animation:floatLogo 1.8s ease-in-out infinite alternate}
 .loading-screen .logo img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply;filter:drop-shadow(0 10px 22px rgba(15,85,101,.28))}
 .loading-screen h2{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:26px;font-weight:800;color:#F5FFFF;text-shadow:0 3px 14px rgba(11,74,92,.42)}
 .loading-screen p{font-size:13px;color:#D6F2F6;font-weight:600}
-.loading-watermark{display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px 11px;border-radius:12px;background:rgba(8,35,57,.28);border:1px solid rgba(173,220,255,.22)}
-.loading-watermark .wm-logo{width:42px;height:42px;border-radius:10px;overflow:hidden;background:rgba(4,21,40,.35);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.22)}
-.loading-watermark .wm-logo img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.04) contrast(1.02)}
-.loading-watermark .wm-text{line-height:1.25}
-.loading-watermark .wm-text strong{display:block;color:#D9F5FF;font-size:11px;letter-spacing:.5px;text-transform:uppercase}
-.loading-watermark .wm-text span{display:block;color:#BCE9FF;font-size:12px;font-weight:600}
+.loading-watermark{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 13px;border-radius:12px;background:rgba(6,30,52,.42);border:1px solid rgba(173,220,255,.24);box-shadow:0 10px 24px rgba(0,0,0,.22)}
+.loading-watermark .wm-logo{width:48px;height:48px;border-radius:10px;overflow:hidden;background:rgba(4,21,40,.45);display:flex;align-items:center;justify-content:center}
+.loading-watermark .wm-logo img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.08) contrast(1.04)}
+.loading-watermark .wm-text{line-height:1.2}
+.loading-watermark .wm-text strong{display:block;color:#D9F5FF;font-size:11px;letter-spacing:.6px;text-transform:uppercase}
+.loading-watermark .wm-text span{display:block;color:#BCE9FF;font-size:12px;font-weight:700}
 @keyframes floatLogo{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+@keyframes bgZoom{from{transform:scale(1)}to{transform:scale(1.06)}}
 .spinner{width:32px;height:32px;border:3px solid rgba(65,165,185,.25);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -425,6 +433,26 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 .notif-item p{font-size:11px;color:var(--text-2);line-height:1.45;margin:0}
 .notif-item .meta{display:flex;justify-content:space-between;margin-top:7px;font-size:10px;color:var(--text-3)}
 
+/* COMMAND CENTER */
+.cc-grid{display:grid;gap:12px}
+.cc-score{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cc-score .value{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:42px;line-height:1;color:var(--teal);font-weight:800}
+.cc-score .label{font-size:12px;color:var(--text-3)}
+.cc-meter{height:8px;border-radius:999px;background:#d7edf1;overflow:hidden;margin-top:10px}
+.cc-meter span{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#14b8a6,#0ea5e9);transition:width .35s ease}
+.cc-forecast{display:grid;gap:7px}
+.cc-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:#F7FCFD;border:1px solid #d5edf1;font-size:12px}
+.cc-actions{display:grid;gap:8px}
+.cc-action{padding:10px 11px;border-radius:10px;border:1px solid #d5edf1;background:#fcfeff}
+.cc-action h4{font-size:12px;color:var(--text);margin-bottom:2px}
+.cc-action p{font-size:11px;color:var(--text-3);line-height:1.45}
+.cc-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cc-search{margin-top:8px}
+.cc-results{display:grid;gap:7px;margin-top:10px;max-height:250px;overflow:auto}
+.cc-result{padding:9px 10px;border:1px solid #d5edf1;border-radius:10px;background:#fafdfe}
+.cc-result .k{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3)}
+.cc-result .v{font-size:12px;font-weight:600;color:var(--text);margin-top:2px}
+
 /* END OF DAY REPORT */
 .report-header{text-align:center;padding:16px 0 20px;border-bottom:2px dashed var(--border);margin-bottom:16px}
 .report-logo{width:86px;height:52px;border-radius:0;overflow:visible;margin:0 auto 10px}
@@ -437,6 +465,11 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
   .hdr{padding:calc(8px + env(safe-area-inset-top)) 12px 10px}
   .hdr-title h1{font-size:17px}
   .hdr-title p{font-size:8px;letter-spacing:1.4px}
+  .loading-screen .logo{width:164px;height:106px}
+  .loading-screen h2{font-size:22px}
+  .loading-watermark{padding:8px 10px}
+  .loading-watermark .wm-logo{width:42px;height:42px}
+  .cc-tools{grid-template-columns:1fr}
   .nav{padding:4px 6px 6px}
   .nav-btn{font-size:10px;padding:8px 9px}
   .screen{padding:14px}
@@ -452,13 +485,16 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 
 <!-- LOADING -->
 <div class="loading-screen" id="loadingScreen">
-  <div class="logo"><img src="./client-logo.png" alt="Cathel Creamy" width="130" height="130" decoding="async"></div>
-  <h2>Cathel Creamy</h2>
-  <p id="loadingMsg">Loading your data...</p>
-  <div class="spinner"></div>
-  <div class="loading-watermark" id="loadingWatermark">
-    <div class="wm-logo"><img src="./LOGOO.jpeg" alt="Data Insights by Ray" width="42" height="42" decoding="async"></div>
-    <div class="wm-text"><strong>Powered by</strong><span>Data Insights by Ray</span></div>
+  <div class="loading-brand-bg" id="loadingWatermark"><img src="./LOGOO.jpeg" alt="" decoding="async"></div>
+  <div class="loading-shell">
+    <div class="logo"><img src="./client-logo.png" alt="Cathel Creamy" width="130" height="130" decoding="async"></div>
+    <h2>Cathel Creamy</h2>
+    <p id="loadingMsg">Loading your data...</p>
+    <div class="spinner"></div>
+    <div class="loading-watermark">
+      <div class="wm-logo"><img src="./LOGOO.jpeg" alt="Data Insights by Ray" width="42" height="42" decoding="async"></div>
+      <div class="wm-text"><strong>Powered by</strong><span>Data Insights By Ray</span></div>
+    </div>
   </div>
 </div>
 
@@ -481,6 +517,7 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
   <button class="nav-btn active" onclick="go('sell',this)"><span class="icon" aria-hidden="true">&#128722;</span>Sell</button>
   <button class="nav-btn" onclick="go('loyalty',this)"><span class="icon" aria-hidden="true">&#127942;</span>Loyalty</button>
   <button class="nav-btn" onclick="go('dash',this)"><span class="icon" aria-hidden="true">&#128202;</span>Dashboard</button>
+  <button class="nav-btn" onclick="go('lab',this)"><span class="icon" aria-hidden="true">&#129504;</span>Command</button>
   <button class="nav-btn" onclick="go('customers',this)"><span class="icon" aria-hidden="true">&#128101;</span>Customers</button>
   <button class="nav-btn" onclick="go('broadcast',this)"><span class="icon" aria-hidden="true">&#128241;</span>Broadcast</button>
   <button class="nav-btn" onclick="go('report',this)"><span class="icon" aria-hidden="true">&#128203;</span>End of Day</button>
@@ -615,6 +652,62 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
   </div>
   <div class="card"><div class="card-title">&#128230; Stock Status</div><div id="d-stock"></div></div>
   <div class="card"><div class="card-title">&#127941; Top Buyers</div><div id="d-top"></div></div>
+</div>
+
+<!-- COMMAND CENTER -->
+<div class="screen" id="sc-lab">
+  <div class="stitle">&#129504; Command Center</div>
+  <div class="cc-grid">
+    <div class="card">
+      <div class="card-title">&#128200; Business Health Score</div>
+      <div class="cc-score">
+        <div>
+          <div class="value" id="labScore">0</div>
+          <div class="label" id="labScoreLabel">Analyzing...</div>
+        </div>
+        <span class="badge mint" id="labSyncState">Sync pending</span>
+      </div>
+      <div class="cc-meter"><span id="labScoreMeter" style="width:0%"></span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128161; Action Queue</div>
+      <div class="cc-actions" id="labActions"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128640; Forecast (Next 7 Days)</div>
+      <div class="cc-forecast" id="labForecast"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128230; Restock Planner</div>
+      <div class="cc-forecast" id="labRestock"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128295; Power Tools</div>
+      <div class="cc-tools">
+        <button class="btn btn-ghost btn-sm" onclick="undoLastSale()">Undo Last Sale</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportOrdersCsv()">Export Orders CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportCustomersCsv()">Export Customers CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadBackup()">Download Backup</button>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn btn-teal btn-sm" onclick="document.getElementById('labImportInput').click()">Import Backup JSON</button>
+        <input id="labImportInput" type="file" accept="application/json,.json" style="display:none" onchange="importBackupFile(event)">
+      </div>
+      <p style="font-size:11px;color:var(--text-3);margin-top:8px">Backup includes settings, customers, orders, products, rewards and notifications.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128269; Global Search</div>
+      <div class="fg cc-search" style="margin:0">
+        <input id="labSearch" placeholder="Search names, products, phones, dates" oninput="runGlobalSearch()">
+      </div>
+      <div class="cc-results" id="labSearchResults"></div>
+    </div>
+  </div>
 </div>
 
 <!--  CUSTOMERS  -->
@@ -1093,6 +1186,7 @@ function refreshVisibleScreen(){
   if(active==='sc-sell'){renderRecent();renderLowStockAlert();}
   if(active==='sc-loyalty')renderLoy();
   if(active==='sc-dash')renderDash();
+  if(active==='sc-lab')renderLab();
   if(active==='sc-customers')renderCusts();
   if(active==='sc-settings')renderSettings();
   if(active==='sc-broadcast'){renderPromoBrain();updateBroadcastPreview();loadTemplate();}
@@ -1104,14 +1198,12 @@ function primeLocalBoot(){
   renderLowStockAlert();
   const wm=document.getElementById('loadingWatermark');
   if(wm){
-    const logo=wm.querySelector('img');
-    if(logo&&logo.getAttribute('src')!==RAY_LOGO_SRC)logo.setAttribute('src',RAY_LOGO_SRC);
-    wm.style.display='flex';
+    wm.classList.remove('out');
   }
   setLoadMsg('Starting Cathel Creamy...');
   setTimeout(()=>{
+    if(wm)wm.classList.add('out');
     setLoadMsg('Connecting to Google Sheets...');
-    if(wm)wm.style.display='none';
     loadFromSheets(true);
     setTimeout(hideLoading,FAST_BOOT_HIDE_MS);
   },BRAND_SPLASH_MS);
@@ -1274,6 +1366,7 @@ function go(name,btn){
   cancelFlow();
   if(name==='loyalty')  renderLoy();
   if(name==='dash')     renderDash();
+  if(name==='lab')      renderLab();
   if(name==='customers')renderCusts();
   if(name==='settings') renderSettings();
   if(name==='sell')     {renderRecent();renderLowStockAlert();}
@@ -1688,6 +1781,271 @@ function renderDashInsights(){
   ].join('');
   const stamp=document.getElementById('dashInsightsTime');
   if(stamp)stamp.textContent='Updated '+new Date().toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+}
+
+// COMMAND CENTER
+function formatCurrency(v){return 'R'+Math.round(Number(v)||0);}
+function getLastNDates(n){
+  const out=[];
+  for(let i=n-1;i>=0;i--){
+    const d=new Date();
+    d.setDate(d.getDate()-i);
+    out.push(d.toISOString().split('T')[0]);
+  }
+  return out;
+}
+function dailyRevenue(dateStr){
+  return DB.orders.filter(o=>o.date===dateStr&&o.status==='Paid').reduce((s,o)=>s+(Number(o.total)||0),0);
+}
+function calculateBusinessHealth(){
+  const totalOrders=DB.orders.length;
+  const activeCustomers=new Set(DB.orders.map(o=>o.parentName));
+  const repeatCustomers=[...activeCustomers].filter(name=>DB.orders.filter(o=>o.parentName===name).length>1).length;
+  const repeatRate=activeCustomers.size?repeatCustomers/activeCustomers.size:0;
+  const phoneCoverage=DB.customers.length?DB.customers.filter(c=>String(c.phone||'').trim()).length/DB.customers.length:0;
+  const lowStockCount=DB.products.filter(p=>{
+    const sold=DB.orders.filter(o=>o.product===p.name).reduce((s,o)=>s+Number(o.qty||0),0);
+    return Math.max(0,(Number(p.stock)||0)-sold)<=Math.max(1,Number(DB.settings.lowStockAt)||5);
+  }).length;
+  const stockHealth=DB.products.length?1-(lowStockCount/DB.products.length):1;
+  const syncHealth=navigator.onLine?(OUTBOX.length?0.75:1):0.6;
+  let score=Math.round((repeatRate*28 + phoneCoverage*22 + stockHealth*25 + syncHealth*25)*100)/100;
+  score=Math.max(1,Math.min(99,Math.round(score*100)));
+  const label=score>=85?'Excellent operating shape':score>=70?'Strong with minor gaps':score>=55?'Moderate - optimize soon':'High risk - action needed';
+  const syncLabel=navigator.onLine?(OUTBOX.length?`${OUTBOX.length} pending sync`:'Sync healthy'):'Offline mode';
+  return {score,label,syncLabel};
+}
+function computeRevenueForecast(){
+  const days=getLastNDates(14);
+  const values=days.map(d=>dailyRevenue(d));
+  const lastVal=values[values.length-1]||0;
+  const xMean=(values.length-1)/2;
+  const yMean=values.reduce((a,b)=>a+b,0)/(values.length||1);
+  let num=0,den=0;
+  values.forEach((y,i)=>{num+=(i-xMean)*(y-yMean);den+=(i-xMean)*(i-xMean);});
+  const slope=den?num/den:0;
+  const forecast=[];
+  for(let i=1;i<=7;i++){
+    const d=new Date();d.setDate(d.getDate()+i);
+    const y=Math.max(0,Math.round(lastVal+slope*i));
+    forecast.push({date:d.toISOString().split('T')[0],amount:y});
+  }
+  return {rows:forecast,total:forecast.reduce((s,r)=>s+r.amount,0)};
+}
+function computeRestockPlan(){
+  const lookbackDays=14;
+  const rows=DB.products.map(p=>{
+    const sold=DB.orders.filter(o=>o.product===p.name&&daysSince(o.date)<=lookbackDays).reduce((s,o)=>s+Number(o.qty||0),0);
+    const avgDaily=sold/lookbackDays;
+    const rem=Math.max(0,Number(p.stock)||0);
+    const daysCover=avgDaily>0?rem/avgDaily:99;
+    const reorder=Math.max(0,Math.ceil((avgDaily*14)-rem));
+    return {name:p.name,avgDaily,rem,daysCover,reorder};
+  }).sort((a,b)=>a.daysCover-b.daysCover||b.reorder-a.reorder);
+  return rows;
+}
+function buildActionQueue(){
+  const actions=[];
+  const co=orderCounts();
+  const threshold=Number(DB.settings.threshold)||10;
+  const rewardReady=DB.customers.filter(c=>(co[c.parentName]||0)>=threshold).length;
+  if(rewardReady>0){
+    actions.push({title:`Message ${rewardReady} reward-ready customer${rewardReady===1?'':'s'}`,desc:'Use Broadcast -> Reward filter for immediate conversion.'});
+  }
+  const inactive=DB.customers.filter(c=>{
+    const last=customerLastOrder(c);
+    return (last?daysSince(last.date):999)>=ALERT_SCAN_WINDOW_DAYS;
+  }).length;
+  if(inactive>0){
+    actions.push({title:`Reactivate ${inactive} inactive account${inactive===1?'':'s'}`,desc:'Run Promo Brain and send a win-back message today.'});
+  }
+  const low=computeRestockPlan().filter(r=>r.daysCover<=3);
+  if(low.length){
+    actions.push({title:`Restock ${low.length} low-cover product${low.length===1?'':'s'}`,desc:'Stock may run out within 3 days at current sales speed.'});
+  }
+  const missingPhones=DB.customers.filter(c=>!String(c.phone||'').trim()).length;
+  if(missingPhones>0){
+    actions.push({title:`Capture WhatsApp numbers (${missingPhones})`,desc:'Customer contact gaps reduce promo reach and loyalty reminders.'});
+  }
+  if(!actions.length){
+    actions.push({title:'All key metrics stable',desc:'No urgent actions detected. Keep recording sales and monitor trends.'});
+  }
+  return actions.slice(0,6);
+}
+function renderLab(){
+  const scoreEl=document.getElementById('labScore');
+  if(!scoreEl)return;
+  const health=calculateBusinessHealth();
+  set('labScore',health.score);
+  set('labScoreLabel',health.label);
+  set('labSyncState',health.syncLabel);
+  const meter=document.getElementById('labScoreMeter');
+  if(meter)meter.style.width=Math.max(4,health.score)+'%';
+
+  const actions=buildActionQueue();
+  const actionsEl=document.getElementById('labActions');
+  if(actionsEl)actionsEl.innerHTML=actions.map(a=>`<div class="cc-action"><h4>${escHtml(a.title)}</h4><p>${escHtml(a.desc)}</p></div>`).join('');
+
+  const fc=computeRevenueForecast();
+  const fcEl=document.getElementById('labForecast');
+  if(fcEl){
+    fcEl.innerHTML=fc.rows.map(r=>{
+      const d=parseDateSafe(r.date);
+      const lbl=d?d.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'}):r.date;
+      return `<div class="cc-row"><span>${escHtml(lbl)}</span><strong>${formatCurrency(r.amount)}</strong></div>`;
+    }).join('')+`<div class="cc-row"><span style="font-weight:700">Projected 7-day total</span><strong>${formatCurrency(fc.total)}</strong></div>`;
+  }
+
+  const rs=computeRestockPlan();
+  const rsEl=document.getElementById('labRestock');
+  if(rsEl){
+    rsEl.innerHTML=rs.slice(0,7).map(r=>`<div class="cc-row"><span>${escHtml(r.name)} (${r.rem} left)</span><strong>${r.reorder>0?`Reorder ${r.reorder}`:'Sufficient'}</strong></div>`).join('');
+  }
+  runGlobalSearch();
+}
+function runGlobalSearch(){
+  const host=document.getElementById('labSearchResults');
+  const q=(document.getElementById('labSearch')?.value||'').trim().toLowerCase();
+  if(!host)return;
+  if(!q){
+    const top=[...DB.orders].reverse().slice(0,5);
+    host.innerHTML=top.length?top.map(o=>`<div class="cc-result"><div class="k">Recent Sale</div><div class="v">${escHtml(o.parentName)} - ${escHtml(o.product)} x${Number(o.qty)||1} (${escHtml(o.date)})</div></div>`).join('')
+      :'<div class="empty" style="padding:16px"><p>Type to search customers, products, orders and dates.</p></div>';
+    return;
+  }
+  const out=[];
+  DB.customers.forEach(c=>{
+    const blob=[c.parentName,c.childName,c.grade,c.phone,c.id,c.qrId].join(' ').toLowerCase();
+    if(blob.includes(q))out.push({k:'Customer',v:`${c.parentName} - ${c.childName} (${c.grade||'No grade'})`});
+  });
+  DB.products.forEach(p=>{
+    const blob=[p.name,p.category,p.price,p.stock].join(' ').toLowerCase();
+    if(blob.includes(q))out.push({k:'Product',v:`${p.name} | ${formatCurrency(p.price)} | stock ${p.stock}`});
+  });
+  DB.orders.forEach(o=>{
+    const blob=[o.parentName,o.product,o.date,o.payment,o.total,o.qty].join(' ').toLowerCase();
+    if(blob.includes(q))out.push({k:'Order',v:`${o.date} - ${o.parentName} - ${o.product} x${o.qty} (${formatCurrency(o.total)})`});
+  });
+  if(!out.length){
+    host.innerHTML='<div class="empty" style="padding:16px"><p>No matches found.</p></div>';
+    return;
+  }
+  host.innerHTML=out.slice(0,40).map(r=>`<div class="cc-result"><div class="k">${escHtml(r.k)}</div><div class="v">${escHtml(r.v)}</div></div>`).join('');
+}
+function downloadBlob(filename,content,mime){
+  const blob=new Blob([content],{type:mime||'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+function csvEscape(v){
+  const s=String(v??'');
+  if(/[",\n]/.test(s))return '"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function exportOrdersCsv(){
+  const cols=['id','date','parentName','product','qty','unitPrice','total','payment','status'];
+  const rows=DB.orders.map(o=>cols.map(c=>csvEscape(o[c])));
+  const csv=[cols.join(','),...rows.map(r=>r.join(','))].join('\n');
+  downloadBlob(`cathel-orders-${today()}.csv`,csv,'text/csv;charset=utf-8');
+  toast('\u2705 Orders CSV exported','ok');
+}
+function exportCustomersCsv(){
+  const cols=['id','qrId','parentName','childName','grade','phone'];
+  const rows=DB.customers.map(c=>cols.map(k=>csvEscape(c[k])));
+  const csv=[cols.join(','),...rows.map(r=>r.join(','))].join('\n');
+  downloadBlob(`cathel-customers-${today()}.csv`,csv,'text/csv;charset=utf-8');
+  toast('\u2705 Customers CSV exported','ok');
+}
+function normalizeImportedDB(raw){
+  const base=defaultDB();
+  const out={
+    settings:{...base.settings,...(raw.settings||{})},
+    products:Array.isArray(raw.products)?raw.products:base.products,
+    customers:Array.isArray(raw.customers)?raw.customers:base.customers,
+    orders:Array.isArray(raw.orders)?raw.orders:[],
+    rewardsLog:Array.isArray(raw.rewardsLog)?raw.rewardsLog:[]
+  };
+  out.settings.threshold=Math.max(1,Number(out.settings.threshold)||10);
+  out.settings.lowStockAt=Math.max(1,Number(out.settings.lowStockAt)||5);
+  out.customers=out.customers.map((c,i)=>({
+    id:String(c.id||('P-'+String(i+1).padStart(3,'0'))),
+    qrId:String(c.qrId||('CC-P-'+String(i+1).padStart(3,'0'))),
+    parentName:String(c.parentName||'').trim(),
+    childName:String(c.childName||'').trim(),
+    grade:String(c.grade||'').trim(),
+    phone:String(c.phone||'').trim()
+  })).filter(c=>c.parentName);
+  out.products=out.products.map((p,i)=>({
+    id:String(p.id||('PRD-'+String(i+1).padStart(2,'0'))),
+    name:String(p.name||'Product '+(i+1)).trim(),
+    category:String(p.category||'Single').trim(),
+    price:Number(p.price)||0,
+    stock:Number(p.stock)||0
+  }));
+  out.orders=out.orders.map((o,i)=>({
+    id:String(o.id||('ORD-'+String(i+1).padStart(4,'0'))),
+    date:String(o.date||today()).substring(0,10),
+    parentName:String(o.parentName||'').trim(),
+    product:String(o.product||'').trim(),
+    qty:Number(o.qty)||1,
+    unitPrice:Number(o.unitPrice)||0,
+    total:Number(o.total)||0,
+    payment:String(o.payment||'Cash').trim(),
+    status:String(o.status||'Paid').trim()
+  })).filter(o=>o.parentName&&o.product);
+  return out;
+}
+function downloadBackup(){
+  const payload={version:1,exportedAt:new Date().toISOString(),db:DB,alerts:ALERTS};
+  downloadBlob(`cathel-backup-${today()}.json`,JSON.stringify(payload,null,2),'application/json');
+  toast('\u2705 Full backup downloaded','ok');
+}
+function importBackupFile(evt){
+  const file=evt?.target?.files?.[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(String(reader.result||'{}'));
+      const incoming=parsed.db&&typeof parsed.db==='object'?parsed.db:parsed;
+      DB=normalizeImportedDB(incoming);
+      ALERTS=Array.isArray(parsed.alerts)?parsed.alerts:[];
+      saveLocal();
+      saveAlerts();
+      refreshVisibleScreen();
+      evaluateOperationalAlerts();
+      renderLab();
+      toast('\u2705 Backup imported successfully','ok');
+    }catch(e){
+      toast('Invalid backup file','er');
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value='';
+}
+function undoLastSale(){
+  if(!DB.orders.length){
+    toast('No sale to undo','er');
+    return;
+  }
+  const last=DB.orders[DB.orders.length-1];
+  DB.orders.pop();
+  const prod=DB.products.find(p=>p.name===last.product);
+  if(prod)prod.stock=Math.max(0,(Number(prod.stock)||0)+(Number(last.qty)||0));
+  const sig=orderSig(last);
+  OUTBOX=OUTBOX.filter(i=>!(i.action==='addOrder'&&orderSig(i.payload||{})===sig));
+  saveOutbox();
+  saveLocal();
+  refreshVisibleScreen();
+  renderLab();
+  evaluateOperationalAlerts();
+  toast('\u21A9 Last sale reversed locally','rw');
 }
 
 //  CUSTOMERS 
