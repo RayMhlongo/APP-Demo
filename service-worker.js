@@ -1,4 +1,4 @@
-const CACHE_VERSION = "cathel-creamy-v8";
+const CACHE_VERSION = "cathel-creamy-v9";
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const OFFLINE_FALLBACK_URL = new URL("./index.html", self.location.href).toString();
@@ -15,13 +15,20 @@ const APP_SHELL = [
   "./icons/icon-192x192.png",
   "./icons/icon-384x384.png",
   "./icons/icon-512x512.png",
+  "./fonts/poppins-400.ttf",
+  "./fonts/poppins-500.ttf",
+  "./fonts/poppins-600.ttf",
+  "./fonts/poppins-700.ttf",
+  "./fonts/baloo2-400.ttf",
+  "./fonts/baloo2-600.ttf",
+  "./fonts/baloo2-700.ttf",
+  "./fonts/baloo2-800.ttf",
 ];
 
 const THIRD_PARTY_ASSETS = [
   "https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js",
-  "https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&display=swap",
 ];
 
 self.addEventListener("install", (event) => {
@@ -117,7 +124,9 @@ function isStaticAsset(pathname) {
     pathname.endsWith(".webp") ||
     pathname.endsWith(".json") ||
     pathname.endsWith(".css") ||
-    pathname.endsWith(".js")
+    pathname.endsWith(".js") ||
+    pathname.endsWith(".ttf") ||
+    pathname.endsWith(".woff2")
   );
 }
 
@@ -138,9 +147,7 @@ self.addEventListener("fetch", (event) => {
 
   // Runtime-cache third-party libraries and fonts.
   if (
-    url.hostname.includes("cdnjs.cloudflare.com") ||
-    url.hostname.includes("fonts.googleapis.com") ||
-    url.hostname.includes("fonts.gstatic.com")
+    url.hostname.includes("cdnjs.cloudflare.com")
   ) {
     event.respondWith(cacheFirst(request, RUNTIME_CACHE));
     return;
