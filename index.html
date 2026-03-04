@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Cathel Creamy</title>
+<title>Cathdel Creamy</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#41A5B9">
-<meta name="application-name" content="Cathel Creamy">
+<meta name="application-name" content="Cathdel Creamy">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Cathel Creamy">
+<meta name="apple-mobile-web-app-title" content="Cathdel Creamy">
 <meta name="apple-touch-fullscreen" content="yes">
 <meta name="color-scheme" content="light">
 <link rel="apple-touch-icon" href="icons/icon-192x192.png">
@@ -487,8 +487,8 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 <div class="loading-screen" id="loadingScreen">
   <div class="loading-brand-bg" id="loadingWatermark"><img src="./LOGOO.jpeg" alt="" decoding="async"></div>
   <div class="loading-shell">
-    <div class="logo"><img src="./client-logo.png" alt="Cathel Creamy" width="130" height="130" decoding="async"></div>
-    <h2>Cathel Creamy</h2>
+    <div class="logo"><img src="./client-logo.png" alt="Cathdel Creamy" width="130" height="130" decoding="async"></div>
+    <h2>Cathdel Creamy</h2>
     <p id="loadingMsg">Loading your data...</p>
     <div class="spinner"></div>
     <div class="loading-watermark">
@@ -502,7 +502,7 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 <div class="hdr">
   <div class="hdr-brand">
     <div class="hdr-logo"><img src="./client-logo.png" alt="logo" width="42" height="42" decoding="async"></div>
-    <div class="hdr-title"><h1>Cathel Creamy</h1><p>Business Manager</p></div>
+    <div class="hdr-title"><h1>Cathdel Creamy</h1><p>Business Manager</p></div>
   </div>
   <div class="hdr-right">
     <div class="hdr-date" id="hdrDate"></div>
@@ -941,9 +941,12 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 
 <script>
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzEzfbRaw0tesxfpw1jGHakZVNlZg2rnwV2MXKUg5faA_u5eSNglHJk2YcoLGItMtBx/exec';
-const STORE_KEY  = 'cathelCreamyV3';
+const STORE_KEY  = 'cathdelCreamyV3';
 const OUTBOX_KEY = STORE_KEY+'-outbox';
 const ALERTS_KEY = STORE_KEY+'-alerts';
+const LEGACY_STORE_KEY = 'cathelCreamyV3';
+const LEGACY_OUTBOX_KEY = LEGACY_STORE_KEY+'-outbox';
+const LEGACY_ALERTS_KEY = LEGACY_STORE_KEY+'-alerts';
 const API_TIMEOUT_MS = 7000;
 const FAST_BOOT_HIDE_MS = 260;
 const BRAND_SPLASH_MS = 900;
@@ -959,8 +962,8 @@ function defaultDB(){
       threshold:10,
       active:'YES',
       lowStockAt:5,
-      rewardMsg:'Hi! Your child has earned a FREE ice cream from Cathel Creamy! Collect at next school day.',
-      promoMsg:'Special offer from Cathel Creamy today! Reply YES to order. Limited stock!',
+      rewardMsg:'Hi! Your child has earned a FREE ice cream from Cathdel Creamy! Collect at next school day.',
+      promoMsg:'Special offer from Cathdel Creamy today! Reply YES to order. Limited stock!',
       notifyEnabled:'YES',
       notifyLowStock:'YES',
       notifyRewards:'YES',
@@ -980,7 +983,17 @@ function defaultDB(){
     rewardsLog:[]
   };
 }
-let DB=(()=>{try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):defaultDB();}catch(e){return defaultDB();}})();
+let DB=(()=>{try{const r=localStorage.getItem(STORE_KEY);return r?JSON.parse(r):null;}catch(e){return null;}})();
+if(!DB){
+  try{
+    const legacy=localStorage.getItem(LEGACY_STORE_KEY);
+    if(legacy){
+      DB=JSON.parse(legacy);
+      localStorage.setItem(STORE_KEY,legacy);
+    }
+  }catch(e){}
+}
+if(!DB)DB=defaultDB();
 if(!DB.settings.lowStockAt)DB.settings.lowStockAt=5;
 if(!DB.settings.notifyEnabled)DB.settings.notifyEnabled='YES';
 if(!DB.settings.notifyLowStock)DB.settings.notifyLowStock='YES';
@@ -988,12 +1001,32 @@ if(!DB.settings.notifyRewards)DB.settings.notifyRewards='YES';
 if(!DB.settings.notifyInactive)DB.settings.notifyInactive='YES';
 DB.customers.forEach(c=>{if(!c.qrId)c.qrId='CC-'+c.id;});
 function saveLocal(){try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}}
-let ALERTS=(()=>{try{const r=localStorage.getItem(ALERTS_KEY);return r?JSON.parse(r):[];}catch(e){return [];}})();
+let ALERTS=(()=>{try{const r=localStorage.getItem(ALERTS_KEY);return r?JSON.parse(r):null;}catch(e){return null;}})();
+if(!ALERTS){
+  try{
+    const legacy=localStorage.getItem(LEGACY_ALERTS_KEY);
+    if(legacy){
+      ALERTS=JSON.parse(legacy);
+      localStorage.setItem(ALERTS_KEY,legacy);
+    }
+  }catch(e){}
+}
+if(!Array.isArray(ALERTS))ALERTS=[];
 function saveAlerts(){try{localStorage.setItem(ALERTS_KEY,JSON.stringify(ALERTS));}catch(e){}}
 
 // GOOGLE SHEETS
 // Robust sync layer: queue writes offline and replay when online.
-let OUTBOX=(()=>{try{const r=localStorage.getItem(OUTBOX_KEY);return r?JSON.parse(r):[];}catch(e){return [];}})();
+let OUTBOX=(()=>{try{const r=localStorage.getItem(OUTBOX_KEY);return r?JSON.parse(r):null;}catch(e){return null;}})();
+if(!OUTBOX){
+  try{
+    const legacy=localStorage.getItem(LEGACY_OUTBOX_KEY);
+    if(legacy){
+      OUTBOX=JSON.parse(legacy);
+      localStorage.setItem(OUTBOX_KEY,legacy);
+    }
+  }catch(e){}
+}
+if(!Array.isArray(OUTBOX))OUTBOX=[];
 let outboxFlushTimer=null;
 let isFlushingOutbox=false;
 function saveOutbox(){try{localStorage.setItem(OUTBOX_KEY,JSON.stringify(OUTBOX));}catch(e){}}
@@ -1200,7 +1233,7 @@ function primeLocalBoot(){
   if(wm){
     wm.classList.remove('out');
   }
-  setLoadMsg('Starting Cathel Creamy...');
+  setLoadMsg('Starting Cathdel Creamy...');
   setTimeout(()=>{
     if(wm)wm.classList.add('out');
     setLoadMsg('Connecting to Google Sheets...');
@@ -1344,7 +1377,7 @@ function copyBroadcastPack(){
   const recipients=getRecipients();
   const msg=document.getElementById('bcast-msg')?.value.trim()||'';
   const lines=[
-    'Cathel Creamy Broadcast Pack',
+    'Cathdel Creamy Broadcast Pack',
     `Targets: ${recipients.length}`,
     '',
     'Numbers:',
@@ -1952,14 +1985,14 @@ function exportOrdersCsv(){
   const cols=['id','date','parentName','product','qty','unitPrice','total','payment','status'];
   const rows=DB.orders.map(o=>cols.map(c=>csvEscape(o[c])));
   const csv=[cols.join(','),...rows.map(r=>r.join(','))].join('\n');
-  downloadBlob(`cathel-orders-${today()}.csv`,csv,'text/csv;charset=utf-8');
+  downloadBlob(`cathdel-orders-${today()}.csv`,csv,'text/csv;charset=utf-8');
   toast('\u2705 Orders CSV exported','ok');
 }
 function exportCustomersCsv(){
   const cols=['id','qrId','parentName','childName','grade','phone'];
   const rows=DB.customers.map(c=>cols.map(k=>csvEscape(c[k])));
   const csv=[cols.join(','),...rows.map(r=>r.join(','))].join('\n');
-  downloadBlob(`cathel-customers-${today()}.csv`,csv,'text/csv;charset=utf-8');
+  downloadBlob(`cathdel-customers-${today()}.csv`,csv,'text/csv;charset=utf-8');
   toast('\u2705 Customers CSV exported','ok');
 }
 function normalizeImportedDB(raw){
@@ -2003,7 +2036,7 @@ function normalizeImportedDB(raw){
 }
 function downloadBackup(){
   const payload={version:1,exportedAt:new Date().toISOString(),db:DB,alerts:ALERTS};
-  downloadBlob(`cathel-backup-${today()}.json`,JSON.stringify(payload,null,2),'application/json');
+  downloadBlob(`cathdel-backup-${today()}.json`,JSON.stringify(payload,null,2),'application/json');
   toast('\u2705 Full backup downloaded','ok');
 }
 function importBackupFile(evt){
@@ -2431,7 +2464,7 @@ function notifyDevice(title,body){
   if(DB.settings.notifyEnabled!=='YES')return;
   if(notificationCapability()!=='granted')return;
   try{
-    new Notification(title,{body,icon:'./icons/icon-192x192.png',badge:'./icons/icon-192x192.png',tag:'cathel-alert'});
+    new Notification(title,{body,icon:'./icons/icon-192x192.png',badge:'./icons/icon-192x192.png',tag:'cathdel-alert'});
   }catch(e){}
 }
 function addAppAlert(type,title,message,dedupeKey){
@@ -2475,9 +2508,9 @@ async function requestNotificationAccess(){
   }
 }
 function sendTestNotification(){
-  const msg='Cathel Creamy alerts are set up and ready.';
+  const msg='Cathdel Creamy alerts are set up and ready.';
   addAppAlert('system','Notification test',msg,'');
-  if(notificationCapability()==='granted')notifyDevice('Cathel Creamy',msg);
+  if(notificationCapability()==='granted')notifyDevice('Cathdel Creamy',msg);
   toast('\u2705 Test alert created','ok');
 }
 function evaluateOperationalAlerts(){

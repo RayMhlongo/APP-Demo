@@ -1,8 +1,8 @@
 {
-  "name": "cathel-creamy-apk-wrapper",
+  "name": "cathdel-creamy-apk-wrapper",
   "version": "1.0.0",
   "private": true,
-  "description": "Free Android APK wrapper pipeline for Cathel Creamy demo",
+  "description": "Free Android APK wrapper pipeline for Cathdel Creamy demo",
   "scripts": {
     "cap:add:android": "npx cap add android",
     "cap:sync": "npx cap sync android",
