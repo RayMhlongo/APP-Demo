@@ -1428,7 +1428,26 @@ function renderLowStockAlert(){
 
 //  QR SCANNER 
 let html5QrCode=null;
-function startScan(){
+async function requestCameraAccess(){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    return {ok:false,msg:'⚠️ Camera API unavailable on this device/browser.'};
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'}},
+      audio:false
+    });
+    stream.getTracks().forEach(t=>t.stop());
+    return {ok:true};
+  }catch(err){
+    const text=String(err&&err.message||'').toLowerCase();
+    if(text.includes('denied')||text.includes('permission')){
+      return {ok:false,msg:'⚠️ Camera permission denied. Use Select Student.'};
+    }
+    return {ok:false,msg:'⚠️ Camera unavailable right now. Use Select Student.'};
+  }
+}
+async function startScan(){
   if(typeof Html5Qrcode==='undefined'){
     toast('\u26A0\uFE0F Scanner unavailable offline. Use Select Student.','er');
     startFlow('select');
@@ -1438,6 +1457,16 @@ function startScan(){
     toast('\uD83D\uDD12 Camera requires HTTPS or installed app mode.','er');
     startFlow('select');
     return;
+  }
+  const cameraState=await requestCameraAccess();
+  if(!cameraState.ok){
+    toast(cameraState.msg,'er');
+    startFlow('select');
+    return;
+  }
+  if(html5QrCode){
+    try{await html5QrCode.stop();}catch(e){}
+    html5QrCode=null;
   }
   hide('v-home');show('v-qr');hide('v-select');hide('v-checkout');hide('v-new-customer');
   html5QrCode=new Html5Qrcode('qr-reader');

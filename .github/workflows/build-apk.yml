@@ -31,6 +31,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
       - name: Add Android platform
         run: |
           if [ ! -d "android" ]; then
@@ -39,6 +43,18 @@ jobs:
 
       - name: Sync Capacitor
         run: npm run cap:sync
+
+      - name: Ensure camera permission in Android manifest
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text(encoding="utf-8")
+          if "android.permission.CAMERA" not in text:
+              insert = '\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n'
+              text = text.replace("</manifest>", insert + "</manifest>")
+              manifest.write_text(text, encoding="utf-8")
+          PY
 
       - name: Build debug APK
         run: |
@@ -49,6 +65,18 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cathel-creamy-demo-debug-apk
+          name: cathdel-creamy-demo-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Create Release with APK
+        uses: softprops/action-gh-release@v1
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: cathdel-v${{ github.run_number }}
+          release_name: Cathdel Creamy Demo APK v${{ github.run_number }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
