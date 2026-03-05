@@ -148,6 +148,7 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 .hdr-title h1{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:18px;font-weight:800;color:white;text-shadow:0 1px 3px rgba(0,0,0,.15)}
 .hdr-title p{font-size:9px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;color:#F6E4B8}
 .hdr-right{display:flex;align-items:center;gap:8px}
+.role-badge{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.45);color:white;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase}
 .hdr-date{color:white;text-align:right;font-size:10px;opacity:.85;font-weight:500}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;transition:all .3s;flex-shrink:0}
 .sync-dot.syncing{background:var(--cream);box-shadow:0 0 6px var(--cream);animation:pulse 1s infinite}
@@ -505,6 +506,7 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
     <div class="hdr-title"><h1>Cathdel Creamy</h1><p>Business Manager</p></div>
   </div>
   <div class="hdr-right">
+    <span class="role-badge" id="roleBadge">Owner</span>
     <div class="hdr-date" id="hdrDate"></div>
     <button id="installBtn" onclick="installApp()">&#11015;&#65039; Install</button>
     <button id="notifBtn" class="notif-btn" onclick="openNotifCenter()" aria-label="Notifications">&#128276;<span class="notif-badge" id="notifBadge">0</span></button>
@@ -938,6 +940,25 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+<div class="overlay" id="onboardOverlay">
+  <div class="popup">
+    <h2>Welcome to Cathdel Creamy</h2>
+    <p style="font-size:13px;color:var(--text-3);margin-bottom:12px;text-align:center">Complete quick setup for role-based operations.</p>
+    <div class="fg"><label>Operator Name</label><input id="obOperator" placeholder="Your name"></div>
+    <div class="fg"><label>Role Mode</label>
+      <select id="obRole">
+        <option value="owner">Owner</option>
+        <option value="manager">Manager</option>
+        <option value="seller">Seller</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-ghost" onclick="skipOnboard()">Skip</button>
+      <button class="btn btn-pink" style="flex:2" onclick="finishOnboard()">Start</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzEzfbRaw0tesxfpw1jGHakZVNlZg2rnwV2MXKUg5faA_u5eSNglHJk2YcoLGItMtBx/exec';
@@ -967,7 +988,10 @@ function defaultDB(){
       notifyEnabled:'YES',
       notifyLowStock:'YES',
       notifyRewards:'YES',
-      notifyInactive:'YES'
+      notifyInactive:'YES',
+      role:'owner',
+      onboarded:false,
+      operatorName:''
     },
     products:[
       {id:'PRD-01',name:'R6 Ice Cream',category:'Single',price:6,stock:50},
@@ -999,6 +1023,9 @@ if(!DB.settings.notifyEnabled)DB.settings.notifyEnabled='YES';
 if(!DB.settings.notifyLowStock)DB.settings.notifyLowStock='YES';
 if(!DB.settings.notifyRewards)DB.settings.notifyRewards='YES';
 if(!DB.settings.notifyInactive)DB.settings.notifyInactive='YES';
+if(!DB.settings.role)DB.settings.role='owner';
+if(typeof DB.settings.onboarded!=='boolean')DB.settings.onboarded=false;
+if(!DB.settings.operatorName)DB.settings.operatorName='';
 DB.customers.forEach(c=>{if(!c.qrId)c.qrId='CC-'+c.id;});
 function saveLocal(){try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}}
 let ALERTS=(()=>{try{const r=localStorage.getItem(ALERTS_KEY);return r?JSON.parse(r):null;}catch(e){return null;}})();
@@ -2663,6 +2690,35 @@ if('serviceWorker' in navigator){
   });
 }
 
+
+function applyRoleBadge(){
+  const b=document.getElementById('roleBadge');
+  if(b)b.textContent=(DB.settings.role||'owner').toUpperCase();
+}
+function startOnboard(){
+  if(DB.settings.onboarded)return;
+  const ov=document.getElementById('onboardOverlay');
+  if(!ov)return;
+  document.getElementById('obOperator').value=DB.settings.operatorName||'';
+  document.getElementById('obRole').value=DB.settings.role||'owner';
+  ov.classList.add('show');
+}
+function finishOnboard(){
+  DB.settings.operatorName=document.getElementById('obOperator').value.trim();
+  DB.settings.role=document.getElementById('obRole').value;
+  DB.settings.onboarded=true;
+  saveLocal();
+  applyRoleBadge();
+  document.getElementById('onboardOverlay').classList.remove('show');
+  toast('Setup complete!','ok');
+}
+function skipOnboard(){
+  DB.settings.onboarded=true;
+  saveLocal();
+  applyRoleBadge();
+  document.getElementById('onboardOverlay').classList.remove('show');
+}
+
 //  INIT 
 document.getElementById('hdrDate').innerHTML=
   new Date().toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'})+'<br>'+
@@ -2675,6 +2731,8 @@ updateNotifStatusChip();
 evaluateOperationalAlerts();
 setInterval(evaluateOperationalAlerts,ALERT_RECHECK_MS);
 refreshInstallButton();
+applyRoleBadge();
+startOnboard();
 primeLocalBoot();
 </script>
 </body>
