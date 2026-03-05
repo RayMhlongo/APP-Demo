@@ -93,7 +93,6 @@ jobs:
 
       - name: Create Release with APK
         uses: softprops/action-gh-release@v1
-        if: github.event_name == 'workflow_dispatch'
         with:
           files: android/app/build/outputs/apk/debug/app-debug.apk
           tag_name: cathdel-v${{ github.run_number }}
