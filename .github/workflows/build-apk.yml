@@ -59,6 +59,25 @@ jobs:
               manifest.write_text(text, encoding="utf-8")
           PY
 
+      - name: Install Python imaging dependency
+        run: python -m pip install pillow
+
+      - name: Apply Cathdel branded launcher icon
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          src = Image.open("icons/icon-512x512.png").convert("RGBA")
+          res = Path("android/app/src/main/res")
+          targets = {"mipmap-mdpi":48,"mipmap-hdpi":72,"mipmap-xhdpi":96,"mipmap-xxhdpi":144,"mipmap-xxxhdpi":192}
+          for folder, size in targets.items():
+              out = res / folder
+              out.mkdir(parents=True, exist_ok=True)
+              icon = src.resize((size, size), Image.Resampling.LANCZOS)
+              for name in ("ic_launcher.png", "ic_launcher_round.png", "ic_launcher_foreground.png"):
+                  icon.save(out / name)
+          PY
+
       - name: Build debug APK
         run: |
           cd android
