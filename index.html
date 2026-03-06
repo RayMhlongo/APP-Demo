@@ -453,6 +453,13 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 .cc-result{padding:9px 10px;border:1px solid #d5edf1;border-radius:10px;background:#fafdfe}
 .cc-result .k{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3)}
 .cc-result .v{font-size:12px;font-weight:600;color:var(--text);margin-top:2px}
+.assistant-quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.assistant-chat{display:grid;gap:8px;max-height:220px;overflow:auto;padding-right:2px}
+.assistant-msg{padding:9px 10px;border-radius:10px;font-size:12px;line-height:1.45}
+.assistant-msg.user{background:#EAF7FB;border:1px solid #cfeaf2;color:var(--text);justify-self:end;max-width:88%}
+.assistant-msg.bot{background:#F7FCFD;border:1px solid #d5edf1;color:var(--text);max-width:100%}
+.assistant-row{display:flex;gap:8px;margin-top:10px}
+.assistant-row input{flex:1}
 
 /* END OF DAY REPORT */
 .report-header{text-align:center;padding:16px 0 20px;border-bottom:2px dashed var(--border);margin-bottom:16px}
@@ -519,7 +526,7 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
   <button class="nav-btn active" onclick="go('sell',this)"><span class="icon" aria-hidden="true">&#128722;</span>Sell</button>
   <button class="nav-btn" onclick="go('loyalty',this)"><span class="icon" aria-hidden="true">&#127942;</span>Loyalty</button>
   <button class="nav-btn" onclick="go('dash',this)"><span class="icon" aria-hidden="true">&#128202;</span>Dashboard</button>
-  <button class="nav-btn" onclick="go('lab',this)"><span class="icon" aria-hidden="true">&#129504;</span>Command</button>
+  <button class="nav-btn" onclick="go('lab',this)"><span class="icon" aria-hidden="true">&#129504;</span>Assistant</button>
   <button class="nav-btn" onclick="go('customers',this)"><span class="icon" aria-hidden="true">&#128101;</span>Customers</button>
   <button class="nav-btn" onclick="go('broadcast',this)"><span class="icon" aria-hidden="true">&#128241;</span>Broadcast</button>
   <button class="nav-btn" onclick="go('report',this)"><span class="icon" aria-hidden="true">&#128203;</span>End of Day</button>
@@ -658,7 +665,22 @@ body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,
 
 <!-- COMMAND CENTER -->
 <div class="screen" id="sc-lab">
-  <div class="stitle">&#129504; Command Center</div>
+  <div class="stitle">&#129504; Business Assistant</div>
+  <div class="card">
+    <div class="card-title">&#129302; Ask Your Business Assistant</div>
+    <p style="font-size:12px;color:var(--text-3);margin-bottom:8px">Ask about sales, revenue, top customers, products, and reward eligibility.</p>
+    <div class="assistant-quick">
+      <button class="btn btn-ghost btn-sm" onclick="assistantQuick('today')">Today's Sales</button>
+      <button class="btn btn-ghost btn-sm" onclick="assistantQuick('week')">Weekly Revenue</button>
+      <button class="btn btn-ghost btn-sm" onclick="assistantQuick('loyal')">Loyal Customers</button>
+      <button class="btn btn-ghost btn-sm" onclick="assistantQuick('promo')">Promotions</button>
+    </div>
+    <div class="assistant-chat" id="assistantChat"></div>
+    <div class="assistant-row">
+      <input id="assistantInput" placeholder="Ask a business question..." onkeydown="if(event.key==='Enter'){askAssistant()}">
+      <button class="btn btn-teal btn-sm" style="width:auto" onclick="askAssistant()">Ask</button>
+    </div>
+  </div>
   <div class="cc-grid">
     <div class="card">
       <div class="card-title">&#128200; Business Health Score</div>
@@ -1418,7 +1440,20 @@ function copyBroadcastPack(){
 
 //  NAV 
 let chartRevenue=null,chartProducts=null,chartGrades=null;
+function getRoleTabs(role){
+  const r=(role||'owner').toLowerCase();
+  if(r==='seller') return ['sell','customers','loyalty','lab','report'];
+  if(r==='manager') return ['sell','customers','loyalty','dash','lab','broadcast','report'];
+  return ['sell','customers','loyalty','dash','lab','broadcast','report','settings'];
+}
+function canAccessTab(name){
+  return getRoleTabs(DB.settings.role).includes(name);
+}
 function go(name,btn){
+  if(!canAccessTab(name)){
+    toast('Access restricted for your role','rw');
+    return;
+  }
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('sc-'+name).classList.add('active');
@@ -1961,9 +1996,101 @@ function buildActionQueue(){
   }
   return actions.slice(0,6);
 }
+function getWeekWindow(){
+  const end=today();
+  const d=parseDateSafe(end)||new Date();
+  d.setDate(d.getDate()-6);
+  const start=d.toISOString().slice(0,10);
+  return {start,end};
+}
+function assistantMetrics(){
+  const {start,end}=getWeekWindow();
+  const todayOrders=dayOrders(today());
+  const weekOrders=DB.orders.filter(o=>o.date>=start&&o.date<=end);
+  const todayRevenue=todayOrders.reduce((s,o)=>s+Number(o.total||0),0);
+  const weekRevenue=weekOrders.reduce((s,o)=>s+Number(o.total||0),0);
+  const weekByCustomer={};
+  const weekByProduct={};
+  weekOrders.forEach(o=>{
+    weekByCustomer[o.parentName]=(weekByCustomer[o.parentName]||0)+Number(o.total||0);
+    weekByProduct[o.product]=(weekByProduct[o.product]||0)+Number(o.qty||0);
+  });
+  const topCustomers=Object.entries(weekByCustomer).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const topProduct=Object.entries(weekByProduct).sort((a,b)=>b[1]-a[1])[0];
+  const co=orderCounts();
+  const threshold=Number(DB.settings.threshold)||10;
+  const eligible=DB.customers.filter(c=>(co[c.parentName]||0)>=threshold);
+  return {todayOrders,todayRevenue,weekOrders,weekRevenue,topCustomers,topProduct,eligible,threshold};
+}
+function assistantAnswer(question){
+  const q=(question||'').toLowerCase().trim();
+  const role=(DB.settings.role||'owner').toLowerCase();
+  const m=assistantMetrics();
+  const sellerLimited=role==='seller';
+  if(!q) return 'Try: "How many sales today?" or use quick buttons.';
+  if(q.includes('today')&&(q.includes('sale')||q.includes('sold'))){
+    return `Today you recorded ${m.todayOrders.length} sale${m.todayOrders.length===1?'':'s'} totaling ${formatCurrency(m.todayRevenue)}.`;
+  }
+  if(q.includes('today')&&q.includes('revenue')){
+    return `Today's revenue is ${formatCurrency(m.todayRevenue)} from ${m.todayOrders.length} transactions.`;
+  }
+  if((q.includes('week')||q.includes('weekly'))&&q.includes('revenue')){
+    if(sellerLimited) return "Seller mode is limited. I can show today's sales and reward-ready customers.";
+    return `Weekly revenue (last 7 days) is ${formatCurrency(m.weekRevenue)} from ${m.weekOrders.length} transactions.`;
+  }
+  if(q.includes('top')&&q.includes('customer')){
+    if(sellerLimited) return "Seller mode is limited. Ask about today's sales or reward customers.";
+    if(!m.topCustomers.length) return 'No customer sales recorded this week yet.';
+    return 'Top customers this week: '+m.topCustomers.map(([n,v],i)=>`${i+1}. ${n} (${formatCurrency(v)})`).join(' | ');
+  }
+  if((q.includes('most')||q.includes('top'))&&(q.includes('product')||q.includes('sell'))){
+    if(sellerLimited) return "Seller mode is limited. Ask about today's sales or rewards.";
+    if(!m.topProduct) return 'No product sales recorded yet.';
+    return `${m.topProduct[0]} is currently the most sold product with ${m.topProduct[1]} units this week.`;
+  }
+  if(q.includes('free')||q.includes('reward')||q.includes('qualif')){
+    if(!m.eligible.length) return `No customer has reached the reward threshold (${m.threshold}) yet.`;
+    return `Reward-ready customers: ${m.eligible.map(c=>c.parentName).join(', ')}.`;
+  }
+  return `Supported questions: "How many sales today?", "What is today's revenue?", "Weekly revenue", "Top customers this week", "Most sold product", "Who qualifies for a free ice cream?"`;
+}
+function assistantAppend(text,kind='bot'){
+  const host=document.getElementById('assistantChat');
+  if(!host)return;
+  const row=document.createElement('div');
+  row.className='assistant-msg '+kind;
+  row.textContent=text;
+  host.appendChild(row);
+  host.scrollTop=host.scrollHeight;
+}
+function assistantQuick(type){
+  const map={today:'How many sales today?',week:'What is weekly revenue?',loyal:'Who qualifies for a free ice cream?',promo:'Which product sells the most?'};
+  const prompt=map[type]||'How many sales today?';
+  assistantAppend(prompt,'user');
+  assistantAppend(assistantAnswer(prompt),'bot');
+}
+function askAssistant(){
+  const input=document.getElementById('assistantInput');
+  const q=(input?.value||'').trim();
+  if(!q)return;
+  assistantAppend(q,'user');
+  assistantAppend(assistantAnswer(q),'bot');
+  input.value='';
+}
+function renderAssistantPanel(){
+  const host=document.getElementById('assistantChat');
+  if(!host)return;
+  if(host.childElementCount)return;
+  const role=(DB.settings.role||'owner').toLowerCase();
+  const intro=role==='seller'
+    ? "Seller mode: ask about today's sales or reward-ready customers."
+    : 'Ask anything about sales, revenue, top customers, products, and rewards.';
+  assistantAppend(intro,'bot');
+}
 function renderLab(){
   const scoreEl=document.getElementById('labScore');
   if(!scoreEl)return;
+  renderAssistantPanel();
   const health=calculateBusinessHealth();
   set('labScore',health.score);
   set('labScoreLabel',health.label);
@@ -2694,6 +2821,25 @@ if('serviceWorker' in navigator){
 function applyRoleBadge(){
   const b=document.getElementById('roleBadge');
   if(b)b.textContent=(DB.settings.role||'owner').toUpperCase();
+  applyRolePermissions();
+}
+function applyRolePermissions(){
+  const allowed=new Set(getRoleTabs(DB.settings.role));
+  document.querySelectorAll('.nav .nav-btn').forEach(btn=>{
+    const onclick=btn.getAttribute('onclick')||'';
+    const m=onclick.match(/go\('([^']+)'/);
+    if(!m)return;
+    btn.style.display=allowed.has(m[1])?'':'none';
+  });
+  const active=document.querySelector('.screen.active');
+  if(active){
+    const name=(active.id||'').replace('sc-','');
+    if(!allowed.has(name)){
+      const fallback=[...document.querySelectorAll('.nav .nav-btn')]
+        .find(b=>(b.getAttribute('onclick')||'').includes("go('sell'"));
+      if(fallback)go('sell',fallback);
+    }
+  }
 }
 function startOnboard(){
   if(DB.settings.onboarded)return;
