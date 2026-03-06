@@ -1,20 +1,1009 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cathdel Creamy Demo</title>
-  <style>
-    body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#e8f6f6;color:#1a3a40}
-    .card{background:#fff;border:1px solid #c8e8ec;border-radius:14px;padding:20px;max-width:420px;text-align:center}
-    a{color:#2d8a9e}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Cathdel Creamy</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#41A5B9">
+<meta name="application-name" content="Cathdel Creamy">
+<meta name="format-detection" content="telephone=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cathdel Creamy">
+<meta name="apple-touch-fullscreen" content="yes">
+<meta name="color-scheme" content="light">
+<link rel="apple-touch-icon" href="icons/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
+<link rel="preload" href="./client-logo.png" as="image" fetchpriority="high">
+<link rel="preload" href="./LOGOO.jpeg" as="image">
+<link rel="dns-prefetch" href="//script.google.com">
+<link rel="preconnect" href="https://script.google.com" crossorigin>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+@font-face{
+  font-family:"Poppins";
+  src:url("./fonts/poppins-400.ttf") format("truetype");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Poppins";
+  src:url("./fonts/poppins-500.ttf") format("truetype");
+  font-style:normal;
+  font-weight:500;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Poppins";
+  src:url("./fonts/poppins-600.ttf") format("truetype");
+  font-style:normal;
+  font-weight:600;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Poppins";
+  src:url("./fonts/poppins-700.ttf") format("truetype");
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Baloo 2";
+  src:url("./fonts/baloo2-400.ttf") format("truetype");
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Baloo 2";
+  src:url("./fonts/baloo2-600.ttf") format("truetype");
+  font-style:normal;
+  font-weight:600;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Baloo 2";
+  src:url("./fonts/baloo2-700.ttf") format("truetype");
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Baloo 2";
+  src:url("./fonts/baloo2-800.ttf") format("truetype");
+  font-style:normal;
+  font-weight:800;
+  font-display:swap;
+}
+:root{
+  --teal:#41A5B9;--teal-d:#2D8A9E;--teal-l:#AEDEDE;--teal-xl:#E8F6F6;
+  --cream:#EBCE8D;--cream-d:#D4B070;--cream-xl:#FDF6E3;
+  --white:#FAFCF7;--text:#1A3A40;--text-2:#3D6B75;--text-3:#7AADB8;
+  --border:#C8E8EC;--red:#E53E3E;--red-l:#FFF0F0;
+  --shadow-s:0 2px 12px rgba(65,165,185,0.12);
+  --shadow-m:0 6px 28px rgba(65,165,185,0.18);
+  --r:18px;--r-s:12px;
+  --glass:rgba(255,255,255,0.18);
+  --ink-shadow:0 8px 32px rgba(26,58,64,0.25);
+  --ease-out:cubic-bezier(.22,.61,.36,1);
+  --dur-fast:.18s;
+  --dur-med:.32s;
+  /* legacy */
+  --pink:#41A5B9;--pink-d:#2D8A9E;--pink-l:#AEDEDE;--pink-xl:#E8F6F6;
+  --mint:#41A5B9;--mint-d:#2D8A9E;--gold:#EBCE8D;--gold-d:#D4B070;--blue:#41A5B9;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;height:100dvh;overflow:hidden}
+body{font-family:"Poppins",sans-serif;background:
+  radial-gradient(1200px 500px at -20% -20%,rgba(255,255,255,.5),transparent 55%),
+  radial-gradient(900px 420px at 120% -10%,rgba(235,206,141,.28),transparent 50%),
+  var(--teal-xl);color:var(--text);display:flex;flex-direction:column;position:relative}
+body::before,body::after{content:"";position:fixed;z-index:0;pointer-events:none;border-radius:999px;filter:blur(36px);opacity:.45}
+body::before{width:220px;height:220px;right:-70px;top:90px;background:rgba(65,165,185,.28);animation:drift 11s ease-in-out infinite alternate}
+body::after{width:180px;height:180px;left:-75px;bottom:90px;background:rgba(235,206,141,.25);animation:drift 13s ease-in-out infinite alternate-reverse}
+.icon{font-size:1.05em;line-height:1;margin-right:4px}
+@keyframes drift{from{transform:translateY(0) translateX(0)}to{transform:translateY(-18px) translateX(12px)}}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;z-index:999;background:
+  radial-gradient(700px 300px at 75% 10%,rgba(235,206,141,.35),transparent 60%),
+  linear-gradient(160deg,var(--teal),var(--teal-d));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  padding:calc(14px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));overflow:hidden}
+.loading-brand-bg{position:absolute;inset:0;pointer-events:none;opacity:.32;transition:opacity .35s}
+.loading-brand-bg.out{opacity:0}
+.loading-brand-bg img{width:100%;height:100%;object-fit:cover;display:block;mix-blend-mode:screen;filter:saturate(1.08) contrast(1.1) brightness(.72);animation:bgZoom 9s ease-in-out infinite alternate}
+.loading-brand-bg::after{content:"";position:absolute;inset:0;background:
+  radial-gradient(800px 300px at 10% 10%,rgba(0,184,255,.28),transparent 55%),
+  linear-gradient(160deg,rgba(7,30,53,.68),rgba(9,49,82,.52),rgba(45,138,158,.33))}
+.loading-shell{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:12px}
+.loading-screen .logo{width:190px;height:124px;border-radius:0;background:transparent;overflow:visible;box-shadow:none;animation:floatLogo 1.8s ease-in-out infinite alternate}
+.loading-screen .logo img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply;filter:drop-shadow(0 10px 22px rgba(15,85,101,.28))}
+.loading-screen h2{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:26px;font-weight:800;color:#F5FFFF;text-shadow:0 3px 14px rgba(11,74,92,.42)}
+.loading-screen p{font-size:13px;color:#D6F2F6;font-weight:600}
+.loading-watermark{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 13px;border-radius:12px;background:rgba(6,30,52,.42);border:1px solid rgba(173,220,255,.24);box-shadow:0 10px 24px rgba(0,0,0,.22)}
+.loading-watermark .wm-logo{width:48px;height:48px;border-radius:10px;overflow:hidden;background:rgba(4,21,40,.45);display:flex;align-items:center;justify-content:center}
+.loading-watermark .wm-logo img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.08) contrast(1.04)}
+.loading-watermark .wm-text{line-height:1.2}
+.loading-watermark .wm-text strong{display:block;color:#D9F5FF;font-size:11px;letter-spacing:.6px;text-transform:uppercase}
+.loading-watermark .wm-text span{display:block;color:#BCE9FF;font-size:12px;font-weight:700}
+@keyframes floatLogo{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+@keyframes bgZoom{from{transform:scale(1)}to{transform:scale(1.06)}}
+.spinner{width:32px;height:32px;border:3px solid rgba(65,165,185,.25);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* HEADER */
+.hdr{background:
+  linear-gradient(140deg,rgba(65,165,185,.96),rgba(45,138,158,.92));
+  padding:calc(8px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  box-shadow:var(--ink-shadow);z-index:10;border-bottom:1px solid rgba(255,255,255,.15)}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-logo{width:54px;height:38px;border-radius:0;background:transparent;overflow:visible;box-shadow:none}
+.hdr-logo img{width:54px;height:38px;object-fit:contain;display:block;mix-blend-mode:multiply;filter:drop-shadow(0 6px 10px rgba(15,85,101,.24))}
+.hdr-title h1{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:18px;font-weight:800;color:white;text-shadow:0 1px 3px rgba(0,0,0,.15)}
+.hdr-title p{font-size:9px;font-weight:700;letter-spacing:1.7px;text-transform:uppercase;color:#F6E4B8}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.role-badge{padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.45);color:white;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase}
+.hdr-date{color:white;text-align:right;font-size:10px;opacity:.85;font-weight:500}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;transition:all .3s;flex-shrink:0}
+.sync-dot.syncing{background:var(--cream);box-shadow:0 0 6px var(--cream);animation:pulse 1s infinite}
+.sync-dot.error{background:#f87171;box-shadow:0 0 6px #f87171}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#installBtn{display:none;align-items:center;gap:5px;background:var(--glass);border:1.5px solid rgba(255,255,255,.5);color:white;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:"Poppins",sans-serif;backdrop-filter:blur(2px)}
+
+/* NAV */
+.nav{display:flex;background:linear-gradient(180deg,#f5fdff,#eaf8fa);border-bottom:2px solid var(--border);overflow-x:auto;scrollbar-width:none;flex-shrink:0;padding:4px 8px 6px}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{flex:none;padding:8px 10px;font-family:"Poppins",sans-serif;font-size:11px;font-weight:600;color:var(--text-2);background:none;border:none;border-radius:999px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.nav-btn:hover,.nav-btn.active{color:#fff;background:linear-gradient(135deg,var(--teal),var(--teal-d));box-shadow:0 5px 14px rgba(45,138,158,.28)}
+.nav-btn.active{transform:translateY(-1px)}
+.nav-btn .icon{display:inline-flex;align-items:center;justify-content:center;transform:translateY(1px)}
+
+/* BODY */
+.body{flex:1;overflow-y:auto;overflow-x:hidden;position:relative;z-index:1;padding-bottom:env(safe-area-inset-bottom)}
+.screen{display:none;padding:16px;max-width:560px;margin:0 auto;animation:fadeUp .25s var(--ease-out)}
+.screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.screen.active .card{animation:cardIn .46s both var(--ease-out)}
+.screen.active .card:nth-of-type(1){animation-delay:.02s}
+.screen.active .card:nth-of-type(2){animation-delay:.06s}
+.screen.active .card:nth-of-type(3){animation-delay:.1s}
+.screen.active .card:nth-of-type(4){animation-delay:.14s}
+.screen.active .card:nth-of-type(5){animation-delay:.18s}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* CARDS */
+.card{background:#fff;border-radius:var(--r);padding:18px;margin-bottom:14px;box-shadow:0 12px 28px rgba(22,112,131,.12);border:1.5px solid #d4edf1}
+.card-title{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:15px;font-weight:700;color:var(--teal);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.card:hover{transform:translateY(-1px);box-shadow:0 16px 30px rgba(22,112,131,.16);transition:transform var(--dur-fast) var(--ease-out),box-shadow var(--dur-med) var(--ease-out)}
+
+/* BUTTONS */
+.btn{width:100%;padding:13px;border:none;border-radius:var(--r-s);font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn:active{transform:scale(.98)}
+.btn:hover{transform:translateY(-1px)}
+.btn-pink,.btn-teal{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:white;box-shadow:0 4px 16px rgba(65,165,185,.3)}
+.btn-mint,.btn-cream{background:linear-gradient(135deg,var(--cream-d),var(--cream));color:var(--text)}
+.btn-ghost{background:white;color:var(--teal);border:2px solid var(--teal-l)}
+.btn-gold{background:linear-gradient(135deg,var(--cream),var(--cream-d));color:var(--text)}
+.btn-danger{background:var(--red-l);color:var(--red);border:2px solid #FFD6D6}
+.btn-sm{width:auto;padding:7px 14px;font-size:12px;border-radius:9px}
+.btn-wa{background:#25D366;color:white;box-shadow:0 4px 16px rgba(37,211,102,.3)}
+
+/* FORMS */
+.fg{margin-bottom:13px}
+.fg label{display:block;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:11px 13px;border:2px solid var(--border);border-radius:var(--r-s);font-family:"Poppins",sans-serif;font-size:14px;color:var(--text);background:var(--teal-xl);transition:border .15s;outline:none}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--teal);background:white;box-shadow:0 0 0 4px rgba(65,165,185,.14)}
+.fg textarea{resize:none;height:76px}
+
+/* STATS */
+.stats-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stats-4{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:white;border-radius:var(--r);padding:15px 12px;text-align:center;box-shadow:var(--shadow-s);border:1.5px solid var(--border)}
+.stat .n{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:26px;font-weight:800;line-height:1}
+.stat .l{font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px;margin-top:3px}
+.stat.pink .n,.stat.teal .n{color:var(--teal)}
+.stat.mint .n{color:var(--teal-d)}
+.stat.blue .n{color:var(--teal)}
+.stat.gold .n{color:var(--cream-d)}
+.stat.red .n{color:var(--red)}
+
+/* BIG BUTTONS */
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.big-btn{border:none;border-radius:var(--r);padding:20px 14px;font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:16px;font-weight:700;color:white;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:transform .15s,box-shadow .2s;box-shadow:0 14px 32px rgba(30,120,141,.25)}
+.big-btn:active{transform:scale(.96)}
+.big-btn:hover{box-shadow:0 18px 34px rgba(30,120,141,.32)}
+.big-btn .bi{font-size:32px}
+.big-btn.pink,.big-btn.teal{background:linear-gradient(135deg,var(--teal),var(--teal-d))}
+.big-btn.mint,.big-btn.cream{background:linear-gradient(135deg,var(--cream-d),var(--cream));color:var(--text)}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:11px}
+.search-wrap input{padding-left:38px}
+.search-wrap::before{content:"\1F50D";position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none}
+
+/* STUDENT LIST */
+.slist{max-height:240px;overflow-y:auto;border:2px solid var(--border);border-radius:var(--r-s)}
+.sitem{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s}
+.sitem:last-child{border-bottom:none}
+.sitem:hover,.sitem.sel{background:var(--teal-xl)}
+.sitem.sel{border-left:4px solid var(--teal)}
+.sitem .nm{font-weight:700;font-size:13px}
+.sitem .sb{font-size:11px;color:var(--text-3)}
+
+/* BADGES */
+.badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--teal-xl);color:var(--teal);white-space:nowrap}
+.badge.gold{background:var(--cream-xl);color:var(--cream-d)}
+.badge.mint{background:var(--teal-xl);color:var(--teal-d)}
+.badge.red{background:var(--red-l);color:var(--red)}
+.badge.green{background:#F0FFF4;color:#276749}
+
+/* PRODUCT GRID */
+.prod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.prod-card{border:2px solid var(--border);border-radius:var(--r-s);padding:13px 10px;cursor:pointer;text-align:center;transition:all .15s}
+.prod-card:hover,.prod-card.sel{border-color:var(--teal);background:var(--teal-xl)}
+.prod-card .pe{font-size:26px;margin-bottom:5px}
+.prod-card .pn{font-weight:700;font-size:12px;margin-bottom:3px;color:var(--text)}
+.prod-card .pp{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;color:var(--teal);font-size:15px;font-weight:700}
+.prod-card .ps{font-size:10px;color:var(--text-3)}
+
+/* STEPPER */
+.stepper{display:flex;align-items:center}
+.stepper button{width:38px;height:38px;border-radius:9px;border:2px solid var(--teal-l);background:white;font-size:20px;font-weight:700;color:var(--teal);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.stepper button:hover{background:var(--teal-xl)}
+.stepper .qv{width:50px;text-align:center;font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:20px;font-weight:700;background:var(--teal-xl);border:2px solid var(--teal-l);border-left:none;border-right:none;height:38px;line-height:34px;color:var(--text)}
+
+/* PAYMENT */
+.pay-row{display:flex;gap:8px}
+.pay-opt{flex:1;padding:9px 6px;border-radius:var(--r-s);border:2px solid var(--border);text-align:center;cursor:pointer;font-weight:600;font-size:12px;transition:all .12s;color:var(--text-3)}
+.pay-opt.sel{border-color:var(--teal);background:var(--teal-xl);color:var(--teal)}
+
+/* RECEIPT */
+.receipt{border:2px dashed var(--teal-l);border-radius:var(--r);padding:16px;margin-top:14px;background:var(--teal-xl)}
+.rrow{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}
+.rrow.total{border-top:2px dashed var(--teal-l);padding-top:10px;margin-top:6px;font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:20px;font-weight:800;color:var(--teal)}
+
+/* LOYALTY */
+.lrow{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid var(--border)}
+.lrow:last-child{border-bottom:none}
+.lavatar{width:40px;height:40px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--teal-l),var(--teal));display:flex;align-items:center;justify-content:center;font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:16px;font-weight:800;color:white}
+.linfo{flex:1;min-width:0}
+.linfo .ln{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.linfo .lc{font-size:11px;color:var(--text-3)}
+.pbar-wrap{height:6px;background:var(--border);border-radius:3px;margin-top:5px;overflow:hidden}
+.pbar{height:100%;background:linear-gradient(90deg,var(--teal-l),var(--teal));border-radius:3px;transition:width .5s ease}
+.lright{flex-shrink:0;text-align:right}
+.lcount{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:17px;font-weight:800;color:var(--teal)}
+.lsub{font-size:10px;color:var(--text-3)}
+
+/* REWARD BANNER */
+.reward-banner{background:linear-gradient(135deg,var(--cream-xl),#FAF0D0);border:2px solid var(--cream);border-radius:var(--r);padding:14px;margin-bottom:14px}
+.reward-banner h3{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;color:var(--cream-d);font-size:14px;margin-bottom:8px}
+.reward-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(235,206,141,.3)}
+.reward-item:last-child{border-bottom:none}
+.wa-btn{background:var(--teal);color:white;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;text-decoration:none;display:inline-block;white-space:nowrap}
+
+/* LOW STOCK ALERT */
+.alert-banner{background:linear-gradient(135deg,#FFF5F5,#FFE8E8);border:2px solid #FCA5A5;border-radius:var(--r);padding:14px;margin-bottom:14px}
+.alert-banner h3{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;color:var(--red);font-size:14px;margin-bottom:8px}
+.alert-item{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(252,165,165,.2);font-size:13px}
+.alert-item:last-child{border-bottom:none}
+
+/* SETTINGS */
+.srow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);gap:10px}
+.srow:last-child{border-bottom:none}
+.srow .sl{font-weight:600;font-size:13px}
+.srow .sd{font-size:11px;color:var(--text-3);margin-top:2px}
+.srow input[type=number]{width:64px;padding:7px;text-align:center;border:2px solid var(--border);border-radius:8px;font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:15px;font-weight:700;outline:none}
+.srow input[type=number]:focus{border-color:var(--teal)}
+.srow select{padding:7px 10px;border:2px solid var(--border);border-radius:8px;font-family:"Poppins",sans-serif;font-size:12px;outline:none;background:white}
+
+/* SALE ITEMS */
+.sale-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border)}
+.sale-item:last-child{border-bottom:none}
+.sale-item .si-name{font-weight:700;font-size:13px}
+.sale-item .si-sub{font-size:11px;color:var(--text-3)}
+.sale-item .si-amt{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:16px;font-weight:700;color:var(--teal)}
+
+/* OVERLAY */
+.overlay{position:fixed;inset:0;z-index:300;background:rgba(26,58,64,.55);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.show{display:flex}
+.popup{background:white;border-radius:24px;padding:28px 22px;max-width:360px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.25);animation:popIn .35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.popup .big-emoji{font-size:56px;margin-bottom:10px}
+.popup h2{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:22px;color:var(--teal);margin-bottom:6px}
+.popup p{font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:14px}
+.popup .msg-box{background:var(--teal-xl);border-radius:10px;padding:12px;font-size:12px;font-weight:500;line-height:1.5;text-align:left;border-left:3px solid var(--teal);margin-bottom:16px;color:var(--text)}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:#1A3A40;color:white;padding:12px 20px;border-radius:50px;font-weight:600;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.25);z-index:500;transition:transform .35s cubic-bezier(.34,1.56,.64,1);max-width:88vw;text-align:center;white-space:nowrap}
+.toast.up{transform:translateX(-50%) translateY(0)}
+.toast.ok{background:linear-gradient(135deg,var(--teal-d),var(--teal))}
+.toast.rw{background:linear-gradient(135deg,var(--cream-d),#B89040)}
+.toast.er{background:linear-gradient(135deg,#E53E3E,#C53030)}
+
+/* SECTION TITLE */
+.stitle{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:18px;font-weight:800;color:var(--teal-d);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+
+/* EMPTY */
+.empty{text-align:center;padding:36px 20px;color:var(--text-3)}
+.empty .ei{font-size:44px;margin-bottom:10px}
+.empty h3{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:16px;color:var(--text-3)}
+.empty p{font-size:12px;margin-top:4px}
+
+/* QR SCANNER */
+.scanner-wrap{border-radius:var(--r);overflow:hidden;margin-bottom:14px;position:relative;background:#000}
+#qr-reader{width:100%!important}
+#qr-reader video{width:100%!important;border-radius:var(--r)}
+#qr-reader img,#qr-reader__dashboard,#qr-reader__status_span,#qr-reader__header_message{display:none!important}
+.scanner-overlay{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.scan-frame{width:180px;height:180px;position:relative}
+.scan-frame::before,.scan-frame::after,.scan-frame .corner-br,.scan-frame .corner-bl{content:"";position:absolute;width:28px;height:28px;border-color:white;border-style:solid}
+.scan-frame::before{top:0;left:0;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.scan-frame::after{top:0;right:0;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+.scan-frame .corner-br{bottom:0;right:0;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.scan-frame .corner-bl{bottom:0;left:0;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+.scan-line{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--teal),transparent);animation:scanAnim 2s linear infinite}
+@keyframes scanAnim{0%{top:0}100%{top:100%}}
+
+/* QR CODE DISPLAY */
+.qr-card{background:white;border-radius:var(--r);padding:20px;text-align:center;border:2px dashed var(--teal-l);margin-bottom:14px}
+#qrCodeDisplay{display:flex;justify-content:center;margin-bottom:14px}
+#qrCodeDisplay canvas,#qrCodeDisplay img{border-radius:10px;border:3px solid var(--teal-l)}
+
+/* NEW CUSTOMER */
+.new-cust-banner{background:linear-gradient(135deg,var(--teal-xl),var(--teal-l));border:2px solid var(--teal-l);border-radius:var(--r);padding:16px;margin-bottom:14px;text-align:center}
+.new-cust-banner h3{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;color:var(--teal);font-size:15px;margin-bottom:6px}
+
+/* CHART CONTAINERS */
+.chart-wrap{position:relative;height:200px;margin-bottom:8px}
+.chart-wrap-tall{position:relative;height:240px;margin-bottom:8px}
+.chart-fallback{display:none;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;background:rgba(232,246,246,.92);border:2px dashed var(--teal-l);border-radius:12px;color:var(--text-2);font-size:12px;font-weight:600;padding:12px}
+.chart-fallback.show{display:flex}
+
+/* LOYALTY CARD */
+.loyalty-card-wrap{background:linear-gradient(135deg,var(--teal),var(--teal-d));border-radius:20px;padding:20px;color:white;margin-bottom:16px;position:relative;overflow:hidden;box-shadow:var(--shadow-m)}
+.loyalty-card-wrap::before{content:"";position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(255,255,255,.08);border-radius:50%}
+.loyalty-card-wrap::after{content:"";position:absolute;bottom:-20px;left:-20px;width:80px;height:80px;background:rgba(255,255,255,.06);border-radius:50%}
+.lc-name{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:20px;font-weight:800;margin-bottom:2px}
+.lc-child{font-size:12px;opacity:.8;margin-bottom:16px}
+.lc-stamps{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.lc-stamp{width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(255,255,255,.1)}
+.lc-stamp.filled{background:var(--cream);border-color:var(--cream)}
+.lc-stamp.filled span{filter:none}
+.lc-progress{font-size:12px;opacity:.85}
+.lc-progress strong{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:16px}
+
+/* CASHUP REPORT */
+.cashup-section{margin-bottom:16px}
+.cashup-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.cashup-row:last-child{border-bottom:none}
+.cashup-row.total{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:18px;font-weight:800;color:var(--teal);border-top:2px solid var(--border);padding-top:12px;margin-top:4px}
+.cashup-row .label{color:var(--text-2)}
+.cashup-row .amount{font-weight:700;color:var(--text)}
+
+/* GRADE FILTER */
+.grade-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.grade-chip{padding:6px 14px;border-radius:20px;border:2px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:white;color:var(--text-2);transition:all .15s}
+.grade-chip.active{background:var(--teal);border-color:var(--teal);color:white}
+
+/* WHATSAPP BROADCAST */
+.wa-preview{background:#E8F5E9;border-radius:var(--r-s);padding:14px;font-size:13px;line-height:1.6;margin-bottom:14px;border-left:3px solid #25D366;color:#1A3A40}
+.recipient-count{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:28px;font-weight:800;color:var(--teal);text-align:center;margin-bottom:4px}
+.recipient-label{font-size:11px;color:var(--text-3);text-align:center;margin-bottom:16px;text-transform:uppercase;letter-spacing:.8px}
+.brain-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.brain-tag{font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--teal-xl);color:var(--teal);white-space:nowrap}
+.brain-summary{font-size:12px;color:var(--text-2);line-height:1.5}
+.brain-list{margin-top:10px;border-top:1px dashed var(--border);padding-top:8px;display:grid;gap:6px}
+.brain-item{display:flex;justify-content:space-between;gap:10px;font-size:11px}
+.brain-item strong{color:var(--text)}
+.brain-item span{color:var(--text-3)}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+/* SMART INSIGHTS */
+.insight-list{display:grid;gap:9px}
+.insight-item{display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border-radius:12px;border:1.5px solid var(--border);background:linear-gradient(180deg,#FCFFFF,#F4FCFD)}
+.insight-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--teal)}
+.insight-item.warn .insight-dot{background:var(--cream-d)}
+.insight-item.risk .insight-dot{background:var(--red)}
+.insight-title{font-weight:700;font-size:12px;color:var(--text)}
+.insight-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+.insight-foot{font-size:10px;color:var(--text-3);margin-top:8px;text-align:right}
+
+/* CUSTOMER 360 + NOTIFICATIONS */
+.notif-btn{position:relative;width:34px;height:34px;border-radius:999px;border:1.5px solid rgba(255,255,255,.48);background:rgba(255,255,255,.18);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;backdrop-filter:blur(2px)}
+.notif-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:999px;background:#EF4444;color:white;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px;border:2px solid rgba(255,255,255,.92)}
+.mini-kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}
+.mini-kpi{background:var(--teal-xl);border:1.5px solid var(--border);border-radius:12px;padding:10px;text-align:center}
+.mini-kpi .k{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:18px;color:var(--teal);font-weight:800}
+.mini-kpi .l{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px}
+.timeline{border-top:1px dashed var(--border);margin-top:12px;padding-top:12px;display:grid;gap:8px;text-align:left}
+.timeline-item{display:flex;justify-content:space-between;gap:12px;font-size:12px;padding:8px 10px;border-radius:10px;background:#F8FDFE}
+.timeline-item .t-left{color:var(--text)}
+.timeline-item .t-right{font-weight:700;color:var(--teal)}
+.notif-list{max-height:300px;overflow:auto;margin-top:12px;display:grid;gap:8px;text-align:left}
+.notif-item{padding:11px 12px;border-radius:12px;border:1.5px solid var(--border);background:white}
+.notif-item.unread{background:#F1FBFD;border-color:#9ED8E1}
+.notif-item h4{font-size:12px;color:var(--text);margin-bottom:3px}
+.notif-item p{font-size:11px;color:var(--text-2);line-height:1.45;margin:0}
+.notif-item .meta{display:flex;justify-content:space-between;margin-top:7px;font-size:10px;color:var(--text-3)}
+
+/* COMMAND CENTER */
+.cc-grid{display:grid;gap:12px}
+.cc-score{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cc-score .value{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:42px;line-height:1;color:var(--teal);font-weight:800}
+.cc-score .label{font-size:12px;color:var(--text-3)}
+.cc-meter{height:8px;border-radius:999px;background:#d7edf1;overflow:hidden;margin-top:10px}
+.cc-meter span{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#14b8a6,#0ea5e9);transition:width .35s ease}
+.cc-forecast{display:grid;gap:7px}
+.cc-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;background:#F7FCFD;border:1px solid #d5edf1;font-size:12px}
+.cc-actions{display:grid;gap:8px}
+.cc-action{padding:10px 11px;border-radius:10px;border:1px solid #d5edf1;background:#fcfeff}
+.cc-action h4{font-size:12px;color:var(--text);margin-bottom:2px}
+.cc-action p{font-size:11px;color:var(--text-3);line-height:1.45}
+.cc-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cc-search{margin-top:8px}
+.cc-results{display:grid;gap:7px;margin-top:10px;max-height:250px;overflow:auto}
+.cc-result{padding:9px 10px;border:1px solid #d5edf1;border-radius:10px;background:#fafdfe}
+.cc-result .k{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3)}
+.cc-result .v{font-size:12px;font-weight:600;color:var(--text);margin-top:2px}
+.assistant-quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.assistant-chat{display:grid;gap:8px;max-height:220px;overflow:auto;padding-right:2px}
+.assistant-msg{padding:9px 10px;border-radius:10px;font-size:12px;line-height:1.45}
+.assistant-msg.user{background:#EAF7FB;border:1px solid #cfeaf2;color:var(--text);justify-self:end;max-width:88%}
+.assistant-msg.bot{background:#F7FCFD;border:1px solid #d5edf1;color:var(--text);max-width:100%}
+.assistant-row{display:flex;gap:8px;margin-top:10px}
+.assistant-row input{flex:1}
+
+/* END OF DAY REPORT */
+.report-header{text-align:center;padding:16px 0 20px;border-bottom:2px dashed var(--border);margin-bottom:16px}
+.report-logo{width:86px;height:52px;border-radius:0;overflow:visible;margin:0 auto 10px}
+.report-logo img{width:86px;height:52px;object-fit:contain;mix-blend-mode:multiply;filter:drop-shadow(0 6px 12px rgba(15,85,101,.24))}
+.report-title{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:20px;font-weight:800;color:var(--teal)}
+.report-date{font-size:12px;color:var(--text-3);margin-top:2px}
+.report-section{margin-bottom:16px}
+.report-section h4{font-family:"Baloo 2","Segoe UI",Tahoma,sans-serif;font-size:14px;color:var(--teal);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+@media (max-width:420px){
+  .hdr{padding:calc(8px + env(safe-area-inset-top)) 12px 10px}
+  .hdr-title h1{font-size:17px}
+  .hdr-title p{font-size:8px;letter-spacing:1.4px}
+  .loading-screen .logo{width:164px;height:106px}
+  .loading-screen h2{font-size:22px}
+  .loading-watermark{padding:8px 10px}
+  .loading-watermark .wm-logo{width:42px;height:42px}
+  .cc-tools{grid-template-columns:1fr}
+  .nav{padding:4px 6px 6px}
+  .nav-btn{font-size:10px;padding:8px 9px}
+  .screen{padding:14px}
+  .card{padding:16px}
+  .stitle{font-size:17px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+.scan-feedback{margin-top:10px;font-size:12px;font-weight:700;text-align:center}
+.scan-feedback.ok{color:#0f8b57}
+.scan-feedback.er{color:#b22b27}
+.credit-pill{display:inline-flex;align-items:center;gap:6px;background:#e8f6f6;border:1px solid #b7dcdc;color:#0f5565;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>Cathdel Creamy Demo</h1>
-    <p>If this screen appears, open the live app link below.</p>
-    <p><a href="https://raymhlongo.github.io/APP-Demo/" target="_blank" rel="noopener">Open Live App</a></p>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-brand-bg" id="loadingWatermark"><img src="./LOGOO.jpeg" alt="" decoding="async"></div>
+  <div class="loading-shell">
+    <div class="logo"><img src="./client-logo.png" alt="Cathdel Creamy" width="130" height="130" decoding="async"></div>
+    <h2>Cathdel Creamy</h2>
+    <p id="loadingMsg">Loading your data...</p>
+    <div class="spinner"></div>
+    <div class="loading-watermark">
+      <div class="wm-logo"><img src="./LOGOO.jpeg" alt="Data Insights by Ray" width="42" height="42" decoding="async"></div>
+      <div class="wm-text"><strong>Powered by</strong><span>Data Insights By Ray</span></div>
+    </div>
   </div>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-brand">
+    <div class="hdr-logo"><img src="./client-logo.png" alt="logo" width="42" height="42" decoding="async"></div>
+    <div class="hdr-title"><h1>Cathdel Creamy</h1><p>Business Manager</p></div>
+  </div>
+  <div class="hdr-right">
+    <span class="role-badge" id="roleBadge">Owner</span>
+    <div class="hdr-date" id="hdrDate"></div>
+    <button id="installBtn" onclick="installApp()">&#11015;&#65039; Install</button>
+    <button id="notifBtn" class="notif-btn" onclick="openNotifCenter()" aria-label="Notifications">&#128276;<span class="notif-badge" id="notifBadge">0</span></button>
+    <div class="sync-dot" id="syncDot"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-btn active" onclick="go('sell',this)"><span class="icon" aria-hidden="true">&#128722;</span>Sell</button>
+  <button class="nav-btn" onclick="go('loyalty',this)"><span class="icon" aria-hidden="true">&#127942;</span>Loyalty</button>
+  <button class="nav-btn" onclick="go('dash',this)"><span class="icon" aria-hidden="true">&#128202;</span>Dashboard</button>
+  <button class="nav-btn" onclick="go('lab',this)"><span class="icon" aria-hidden="true">&#129504;</span>Assistant</button>
+  <button class="nav-btn" onclick="go('customers',this)"><span class="icon" aria-hidden="true">&#128101;</span>Customers</button>
+  <button class="nav-btn" onclick="go('broadcast',this)"><span class="icon" aria-hidden="true">&#128241;</span>Broadcast</button>
+  <button class="nav-btn" onclick="go('report',this)"><span class="icon" aria-hidden="true">&#128203;</span>End of Day</button>
+  <button class="nav-btn" onclick="go('settings',this)"><span class="icon" aria-hidden="true">&#9881;&#65039;</span>Settings</button>
+</div>
+
+<div class="body">
+
+<!--  SELL  -->
+<div class="screen active" id="sc-sell">
+  <div id="v-home">
+    <div id="lowStockAlert"></div>
+    <div class="action-row">
+      <button class="big-btn teal" onclick="startScan()"><span class="bi">&#128247;</span>Scan QR</button>
+      <button class="big-btn cream" onclick="startFlow('select')"><span class="bi">&#128100;</span>Select Student</button>
+      <button class="big-btn mint" onclick="generateReverseQR()"><span class="bi">&#128438;</span>Generate Blank QR</button>
+    </div>
+    <div class="stitle">&#128221; Recent Sales</div>
+    <div class="card" style="padding:0;overflow:hidden"><div id="recentList"></div></div>
+  </div>
+  <div id="v-qr" style="display:none">
+    <div class="card">
+      <div class="card-title">&#128247; Scan Customer QR Code</div>
+      <div class="scanner-wrap"><div id="qr-reader"></div>
+        <div class="scanner-overlay"><div class="scan-frame"><div class="scan-line"></div><div class="corner-br"></div><div class="corner-bl"></div></div></div>
+      </div>
+      <p style="text-align:center;font-size:12px;color:var(--text-3);margin-bottom:12px">Point camera at customer's QR code</p>
+      <div id="scanFeedback" class="scan-feedback"></div>
+      <button class="btn btn-ghost" onclick="stopScan()">&#8592; Back</button>
+    </div>
+  </div>
+  <div id="v-new-customer" style="display:none">
+      <div class="card">
+      <div class="new-cust-banner"><h3>&#128075; New Customer!</h3><p>Fill in their details to register.</p></div>
+      <div class="card-title">&#10133; Register New Customer</div>
+      <div class="fg"><label>Parent / Guardian Name (Optional)</label><input id="nc-pname" placeholder="e.g. Sipho Mom"></div>
+      <div class="fg"><label>Child Name</label><input id="nc-cname" placeholder="e.g. Sipho"></div>
+      <div class="fg"><label>Grade / Class</label><input id="nc-grade" placeholder="e.g. Grade 4"></div>
+      <div class="fg"><label>WhatsApp Number</label><input id="nc-phone" placeholder="+27 72 123 4567"></div>
+      <div class="fg"><label>Credit Top-Up (R)</label><input id="nc-credit" type="number" min="0" step="1" value="0"></div>
+      <input type="hidden" id="nc-qrid">
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-ghost" style="flex:1" onclick="cancelFlow()">Cancel</button>
+        <button class="btn btn-teal" style="flex:2" onclick="registerNewFromScan()">&#9989; Register & Continue</button>
+      </div>
+    </div>
+  </div>
+  <div id="v-select" style="display:none">
+    <div class="card">
+      <div class="card-title">&#128100; Select Student</div>
+      <div class="search-wrap"><input id="stuSearch" placeholder="Search by name or child" oninput="renderStudentList()"></div>
+      <div class="slist" id="stuList"></div>
+      <div style="margin-top:12px"><button class="btn btn-ghost" onclick="cancelFlow()">&#8592; Back</button></div>
+    </div>
+  </div>
+  <div id="v-checkout" style="display:none">
+    <div class="card">
+      <div class="card-title">&#128722; Sale for <span id="coName" style="color:var(--text);font-family:Poppins"></span></div>
+      <div style="margin-bottom:8px"><span class="credit-pill" id="coCredit">Credit: R0</span></div>
+      <div class="fg"><label>Choose Product</label><div class="prod-grid" id="prodGrid"></div></div>
+      <div class="fg"><label>Quantity</label>
+        <div class="stepper">
+          <button onclick="adjQty(-1)">&#8722;</button>
+          <div class="qv" id="qtyDisp">1</div>
+          <button onclick="adjQty(1)">+</button>
+        </div>
+      </div>
+      <div class="fg"><label>Payment</label>
+        <div class="pay-row">
+          <div class="pay-opt sel" onclick="setPay(this,'Cash')"> Cash</div>
+          <div class="pay-opt" onclick="setPay(this,'Card')"> Card</div>
+          <div class="pay-opt" onclick="setPay(this,'EFT')"> EFT</div>
+        </div>
+      </div>
+      <div id="receiptArea" style="display:none">
+        <div class="receipt">
+          <div class="rrow"><span>Product</span><span id="r-p"></span></div>
+          <div class="rrow"><span>Qty &#215; Price</span><span id="r-q"></span></div>
+          <div class="rrow total"><span>TOTAL</span><span id="r-t">R0</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn btn-ghost" style="flex:1" onclick="cancelFlow()">&#8592; Back</button>
+        <button class="btn btn-teal" style="flex:2" id="recBtn" onclick="recordSale()" disabled>&#9989; Record Sale</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--  LOYALTY  -->
+<div class="screen" id="sc-loyalty">
+  <div class="stitle">&#127942; Loyalty Tracker</div>
+  <div id="loyBanners"></div>
+  <div class="card" style="padding:0 18px"><div id="loyList"></div></div>
+</div>
+
+<!--  DASHBOARD  -->
+<div class="screen" id="sc-dash">
+  <div class="stitle">&#128202; Dashboard</div>
+  <div class="stats-4">
+    <div class="stat teal"><div class="n" id="d-rev">R0</div><div class="l">Revenue</div></div>
+    <div class="stat mint"><div class="n" id="d-ord">0</div><div class="l">Orders</div></div>
+    <div class="stat blue"><div class="n" id="d-units">0</div><div class="l">Units Sold</div></div>
+    <div class="stat gold"><div class="n" id="d-cust">0</div><div class="l">Customers</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#128197; Today</div>
+    <div class="stats-2">
+      <div class="stat teal"><div class="n" id="d-trev">R0</div><div class="l">Revenue</div></div>
+      <div class="stat mint"><div class="n" id="d-tord">0</div><div class="l">Orders</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#129504; Smart Insights</div>
+    <div class="insight-list" id="dashInsights"></div>
+    <div class="insight-foot" id="dashInsightsTime"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#128200; Revenue - Last 7 Days</div>
+    <div class="chart-wrap"><canvas id="chartRevenue"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#127846; Sales by Product</div>
+    <div class="chart-wrap"><canvas id="chartProducts"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#127891; Sales by Grade</div>
+    <div class="grade-chips" id="gradeChips"></div>
+    <div class="chart-wrap"><canvas id="chartGrades"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#127941; Loyalty Summary</div>
+    <div class="srow"><div><div class="sl"> Rewards Earned</div></div><span class="badge gold" id="d-rearned">0</span></div>
+    <div class="srow"><div><div class="sl"> Still Working Towards</div></div><span class="badge" id="d-rpend">0</span></div>
+    <div class="srow"><div><div class="sl"> Purchases Needed</div></div><span class="badge mint" id="d-thresh">10</span></div>
+  </div>
+  <div class="card"><div class="card-title">&#128230; Stock Status</div><div id="d-stock"></div></div>
+  <div class="card"><div class="card-title">&#127941; Top Buyers</div><div id="d-top"></div></div>
+</div>
+
+<!-- COMMAND CENTER -->
+<div class="screen" id="sc-lab">
+  <div class="stitle">&#129504; Business Assistant</div>
+  <div class="card">
+    <div class="card-title">&#129302; Ask Your Business Assistant</div>
+    <p style="font-size:12px;color:var(--text-3);margin-bottom:8px">Ask about sales, revenue, top customers, products, and reward eligibility.</p>
+    <div class="assistant-quick">
+      <button class="btn btn-ghost btn-sm" onclick="assistantQuick('today')">Today's Sales</button>
+      <button class="btn btn-ghost btn-sm" onclick="assistantQuick('week')">Weekly Revenue</button>
+      <button class="btn btn-ghost btn-sm" onclick="assistantQuick('loyal')">Loyal Customers</button>
+      <button class="btn btn-ghost btn-sm" onclick="assistantQuick('promo')">Promotions</button>
+    </div>
+    <div class="assistant-chat" id="assistantChat"></div>
+    <div class="assistant-row">
+      <input id="assistantInput" placeholder="Ask a business question..." onkeydown="if(event.key==='Enter'){askAssistant()}">
+      <button class="btn btn-teal btn-sm" style="width:auto" onclick="askAssistant()">Ask</button>
+    </div>
+  </div>
+  <div class="cc-grid">
+    <div class="card">
+      <div class="card-title">&#128200; Business Health Score</div>
+      <div class="cc-score">
+        <div>
+          <div class="value" id="labScore">0</div>
+          <div class="label" id="labScoreLabel">Analyzing...</div>
+        </div>
+        <span class="badge mint" id="labSyncState">Sync pending</span>
+      </div>
+      <div class="cc-meter"><span id="labScoreMeter" style="width:0%"></span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128161; Action Queue</div>
+      <div class="cc-actions" id="labActions"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128640; Forecast (Next 7 Days)</div>
+      <div class="cc-forecast" id="labForecast"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128230; Restock Planner</div>
+      <div class="cc-forecast" id="labRestock"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128295; Power Tools</div>
+      <div class="cc-tools">
+        <button class="btn btn-ghost btn-sm" onclick="undoLastSale()">Undo Last Sale</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportOrdersCsv()">Export Orders CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportCustomersCsv()">Export Customers CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadBackup()">Download Backup</button>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn btn-teal btn-sm" onclick="document.getElementById('labImportInput').click()">Import Backup JSON</button>
+        <input id="labImportInput" type="file" accept="application/json,.json" style="display:none" onchange="importBackupFile(event)">
+      </div>
+      <p style="font-size:11px;color:var(--text-3);margin-top:8px">Backup includes settings, customers, orders, products, rewards and notifications.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">&#128269; Global Search</div>
+      <div class="fg cc-search" style="margin:0">
+        <input id="labSearch" placeholder="Search names, products, phones, dates" oninput="runGlobalSearch()">
+      </div>
+      <div class="cc-results" id="labSearchResults"></div>
+    </div>
+  </div>
+</div>
+
+<!--  CUSTOMERS  -->
+<div class="screen" id="sc-customers">
+  <div class="stitle"><span>&#128101; Customers</span><button class="btn btn-teal btn-sm" onclick="toggleAddCust()">&#10133; Add</button></div>
+  <div id="addCustCard" style="display:none">
+    <div class="card">
+      <div class="card-title">&#10133; New Customer</div>
+      <div class="fg"><label>Parent / Guardian Name (Optional)</label><input id="c-pname" placeholder="e.g. Sipho Mom"></div>
+      <div class="fg"><label>Child Name</label><input id="c-cname" placeholder="e.g. Sipho"></div>
+      <div class="fg"><label>Grade / Class</label><input id="c-grade" placeholder="e.g. Grade 4"></div>
+      <div class="fg"><label>WhatsApp Number</label><input id="c-phone" placeholder="+27 72 123 4567"></div>
+      <div class="fg"><label>Credit Top-Up (R)</label><input id="c-credit" type="number" min="0" step="1" value="0"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" style="flex:1" onclick="toggleAddCust()">Cancel</button>
+        <button class="btn btn-teal" style="flex:2" onclick="saveNewCust()"> Save & Generate QR</button>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="padding:14px;margin-bottom:10px">
+    <div class="search-wrap" style="margin:0"><input id="custSearch" placeholder="Search customers" oninput="renderCusts()"></div>
+  </div>
+  <div id="custList"></div>
+</div>
+
+<!--  BROADCAST  -->
+<div class="screen" id="sc-broadcast">
+  <div class="stitle">&#128241; WhatsApp Broadcast</div>
+  <div class="card">
+    <div class="brain-head">
+      <div>
+        <div class="card-title" style="margin-bottom:6px">&#129504; Promo Brain</div>
+        <div class="brain-summary" id="promoBrainSummary">Analyzing your customer activity...</div>
+      </div>
+      <span class="brain-tag" id="promoBrainTag">Auto</span>
+    </div>
+    <div class="brain-list" id="promoBrainList"></div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-teal btn-sm" onclick="applyPromoBrain()">Use Recommended</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyBroadcastNumbers()">Copy Numbers</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#127919; Target Audience</div>
+    <div class="srow">
+      <div><div class="sl">Send to</div><div class="sd">Filter who receives this</div></div>
+      <select id="bcast-filter" onchange="updateBroadcastPreview()">
+        <option value="brain">&#129504; Promo Brain (Recommended)</option>
+        <option value="all">&#128101; All Customers</option>
+        <option value="reward">&#127881; Ready for Reward</option>
+        <option value="inactive">&#9203; Haven't bought this week</option>
+        <option value="close">&#128273; Close to reward (8+)</option>
+      </select>
+    </div>
+    <div style="margin-top:12px">
+      <div class="recipient-count" id="bcastCount">0</div>
+      <div class="recipient-label">recipients selected</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#9997;&#65039; Message</div>
+    <div class="fg" style="margin-bottom:10px">
+      <label>Choose template</label>
+      <select id="bcast-template" onchange="loadTemplate()">
+        <option value="promo">&#128227; Promotion</option>
+        <option value="reward">&#127881; Reward Ready</option>
+        <option value="custom">&#9997;&#65039; Custom message</option>
+      </select>
+    </div>
+    <div class="fg" style="margin-bottom:0">
+      <label>Message text</label>
+      <textarea id="bcast-msg" rows="4" style="height:100px" oninput="updateBroadcastPreview()"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#128065;&#65039; Preview</div>
+    <div class="wa-preview" id="bcastPreview">Your message will appear here...</div>
+    <p style="font-size:11px;color:var(--text-3);margin-bottom:14px">This free mode prepares the exact target list and message for WhatsApp broadcast flow.</p>
+    <div class="btn-row-3">
+      <button class="btn btn-ghost btn-sm" onclick="copyBroadcastMessage()">Copy Message</button>
+      <button class="btn btn-ghost btn-sm" onclick="copyBroadcastPack()">Copy Pack</button>
+      <button class="btn btn-wa btn-sm" onclick="startBroadcast()">Open WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!--  END OF DAY  -->
+<div class="screen" id="sc-report">
+  <div class="stitle">&#128203; End of Day Report</div>
+  <div class="card">
+    <div class="fg" style="margin-bottom:10px">
+      <label>Select Date</label>
+      <input type="date" id="reportDate" onchange="renderReport()">
+    </div>
+  </div>
+  <div id="reportContent"></div>
+</div>
+
+<!--  SETTINGS  -->
+<div class="screen" id="sc-settings">
+  <div class="stitle">&#9881;&#65039; Settings</div>
+  <div class="card">
+    <div class="card-title">&#127942; Loyalty Programme</div>
+    <div class="srow">
+      <div><div class="sl">Purchases for reward</div><div class="sd">Change threshold</div></div>
+      <input type="number" id="s-thresh" min="1" max="100">
+    </div>
+    <div class="srow">
+      <div><div class="sl">Loyalty active?</div></div>
+      <select id="s-active"><option>YES</option><option>NO</option></select>
+    </div>
+    <div class="fg" style="margin-top:10px;margin-bottom:0">
+      <label>WhatsApp reward message</label>
+      <textarea id="s-rmsg"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#128227; Promotion Message</div>
+    <div class="fg" style="margin-bottom:0"><label>Promotion message</label><textarea id="s-pmsg"></textarea></div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#128276; Notifications</div>
+    <div class="srow">
+      <div><div class="sl">Device permission</div><div class="sd">Current browser notification status</div></div>
+      <span class="badge" id="notifStatusChip">Checking...</span>
+    </div>
+    <div class="srow">
+      <div><div class="sl">Enable notifications</div><div class="sd">In-app alerts and optional browser popups</div></div>
+      <select id="s-notify-enabled"><option>YES</option><option>NO</option></select>
+    </div>
+    <div class="srow">
+      <div><div class="sl">Low stock alerts</div></div>
+      <select id="s-notify-low"><option>YES</option><option>NO</option></select>
+    </div>
+    <div class="srow">
+      <div><div class="sl">Reward ready alerts</div></div>
+      <select id="s-notify-reward"><option>YES</option><option>NO</option></select>
+    </div>
+    <div class="srow">
+      <div><div class="sl">Inactive customer alerts</div></div>
+      <select id="s-notify-inactive"><option>YES</option><option>NO</option></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="requestNotificationAccess()">Enable on this device</button>
+      <button class="btn btn-teal btn-sm" style="flex:1" onclick="sendTestNotification()">Send test</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#9888;&#65039; Low Stock Warning Level</div>
+    <div class="srow">
+      <div><div class="sl">Warn when stock below</div><div class="sd">Shows alert on sell screen</div></div>
+      <input type="number" id="s-lowstock" min="1" max="50" value="5">
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">&#127846; Products & Prices</div>
+    <div id="prodSettings"></div>
+    <button class="btn btn-ghost" style="margin-top:10px" onclick="addProd()">&#10133; Add Product</button>
+  </div>
+  <button class="btn btn-teal" onclick="saveSettings()" style="margin-bottom:24px">&#128190; Save All Settings</button>
+</div>
+
+</div><!-- /body -->
+
+<!-- REWARD POPUP -->
+<div class="overlay" id="rewardOverlay">
+  <div class="popup">
+    <div class="big-emoji">&#127881;</div>
+    <h2>REWARD EARNED!</h2>
+    <p id="popSub"></p>
+    <div class="msg-box" id="popMsg"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeReward()">Close</button>
+      <a id="popWaBtn" class="btn btn-wa" style="flex:2;text-decoration:none" target="_blank">&#128241; WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<!-- QR CODE POPUP -->
+<div class="overlay" id="qrOverlay">
+  <div class="popup">
+    <div class="big-emoji">&#128247;</div>
+    <h2>Customer QR Code</h2>
+    <p id="qrPopupName" style="font-weight:700;color:var(--teal);margin-bottom:4px"></p>
+    <p style="font-size:11px;color:var(--text-3);margin-bottom:14px">Ask them to screenshot and save to phone</p>
+    <div id="qrCodeDisplay" style="display:flex;justify-content:center;margin-bottom:16px"></div>
+    <button class="btn btn-teal" onclick="closeQR()">Done &#9989;</button>
+  </div>
+</div>
+
+<!-- LOYALTY CARD POPUP -->
+<div class="overlay" id="loyaltyCardOverlay">
+  <div class="popup" style="max-width:380px">
+    <div id="loyaltyCardContent"></div>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeLoyaltyCard()">Close</button>
+  </div>
+</div>
+
+<!-- PARENT PORTAL OVERLAY -->
+<div class="overlay" id="parentPortalOverlay">
+  <div class="popup" style="max-width:380px;padding:20px">
+    <div id="parentPortalContent"></div>
+    <button class="btn btn-ghost" style="margin-top:12px" onclick="closeParentPortal()">Close</button>
+  </div>
+</div>
+
+<!-- CUSTOMER 360 OVERLAY -->
+<div class="overlay" id="customer360Overlay">
+  <div class="popup" style="max-width:420px;text-align:left;padding:22px">
+    <div id="customer360Content"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeCustomer360()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION CENTER -->
+<div class="overlay" id="notifOverlay">
+  <div class="popup" style="max-width:430px;text-align:left;padding:22px">
+    <h2 style="margin-bottom:6px">&#128276; Notification Center</h2>
+    <p style="margin-bottom:10px">Operational alerts for low stock, loyalty, and customer reactivation opportunities.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="clearNotifications()">Clear all</button>
+      <button class="btn btn-teal btn-sm" style="flex:1" onclick="closeNotifCenter()">Done</button>
+    </div>
+    <div class="notif-list" id="notifList"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+<div class="overlay" id="onboardOverlay">
+  <div class="popup">
+    <h2>Welcome to Cathdel Creamy</h2>
+    <p style="font-size:13px;color:var(--text-3);margin-bottom:12px;text-align:center">Complete quick setup for role-based operations.</p>
+    <div class="fg"><label>Operator Name</label><input id="obOperator" placeholder="Your name"></div>
+    <div class="fg"><label>Role Mode</label>
+      <select id="obRole">
+        <option value="owner">Owner</option>
+        <option value="manager">Manager</option>
+        <option value="seller">Seller</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-ghost" onclick="skipOnboard()">Skip</button>
+      <button class="btn btn-pink" style="flex:2" onclick="finishOnboard()">Start</button>
+    </div>
+  </div>
+</div>
+
+
+  <script src="./js/app-main.js"></script>
+  <script src="./js/roles.js"></script>
+  <script src="./js/qr.js"></script>
+  <script src="./js/loyalty.js"></script>
+  <script src="./js/dashboard.js"></script>
+  <script src="./js/sync.js"></script>
+  <script src="./js/assistant.js"></script>
+  <script src="./js/settings.js"></script>
 </body>
 </html>
+
+
+
+
+
