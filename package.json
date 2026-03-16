@@ -6,7 +6,7 @@
   "scripts": {
     "cap:add:android": "npx cap add android",
     "cap:sync": "npx cap sync android",
-    "apk:debug": "cd android && ./gradlew assembleDebug"
+    "apk:debug": "cd android && gradlew.bat assembleDebug"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.3"

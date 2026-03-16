@@ -1,16 +1,16 @@
 {
-  "id": "./?app=cathdel-creamy",
-  "name": "Cathdel Creamy",
-  "short_name": "Cathdel Creamy",
-  "description": "Ice cream business manager \u2014 sell, track loyalty, manage customers",
+  "id": "./?app=creamtrack-vendor",
+  "name": "CreamTrack Vendor",
+  "short_name": "CreamTrack",
+  "description": "Mobile-first business manager for sales, loyalty, missed-day logs, and actionable insights.",
   "start_url": "./index.html?source=pwa",
   "display": "standalone",
   "display_override": [
     "standalone",
     "minimal-ui"
   ],
-  "background_color": "#AEDEDE",
-  "theme_color": "#41A5B9",
+  "background_color": "#f3f7f8",
+  "theme_color": "#0f766e",
   "orientation": "portrait",
   "scope": "./",
   "prefer_related_applications": false,
