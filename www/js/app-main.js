@@ -1,4 +1,4 @@
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzEzfbRaw0tesxfpw1jGHakZVNlZg2rnwV2MXKUg5faA_u5eSNglHJk2YcoLGItMtBx/exec';
+﻿const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzEzfbRaw0tesxfpw1jGHakZVNlZg2rnwV2MXKUg5faA_u5eSNglHJk2YcoLGItMtBx/exec';
 const STORE_KEY  = 'cathdelCreamyV3';
 const OUTBOX_KEY = STORE_KEY+'-outbox';
 const ALERTS_KEY = STORE_KEY+'-alerts';
@@ -13,6 +13,10 @@ const ALERT_SCAN_WINDOW_DAYS = 14;
 const ALERT_RECHECK_MS = 120000;
 const LOGO_SRC   = './client-logo.png';
 const RAY_LOGO_SRC = './LOGOO.jpeg';
+const GOOGLE_TOKEN_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const CLOUD_BACKUP_FILE = 'cathdel-cloud-backup.json';
+let googleTokenClient=null;
+let googleAccessToken='';
 
 function defaultDB(){
   return {
@@ -28,7 +32,9 @@ function defaultDB(){
       notifyInactive:'YES',
       role:'owner',
       onboarded:false,
-      operatorName:''
+      operatorName:'',
+      googleClientId:'',
+      cloudRestorePrompted:false
     },
     products:[
       {id:'PRD-01',name:'R6 Ice Cream',category:'Single',price:6,stock:50},
@@ -36,9 +42,14 @@ function defaultDB(){
       {id:'PRD-03',name:'Family Pack',category:'Family',price:100,stock:10}
     ],
     customers:[
-      {id:'P-001',qrId:'CC-P-001',parentName:'Akami Mom',childName:'Akami',grade:'Grade 5',phone:'+27723408365',credit:0},
-      {id:'P-002',qrId:'CC-P-002',parentName:'Damian Mom',childName:'Damian',grade:'Grade 3',phone:'+27768224643',credit:0},
-      {id:'P-003',qrId:'CC-P-003',parentName:'Gali and Opfuna Mom',childName:'Gali/Opfuna',grade:'Grade 6',phone:'+27818092014',credit:0}
+      {id:'P-001',qrId:'CC-P-001',profileType:'child',parentName:'Akami Mom',childName:'Akami',displayName:'Akami',grade:'5',phone:'+27723408365',credit:0,accountId:'WAL-0001'},
+      {id:'P-002',qrId:'CC-P-002',profileType:'child',parentName:'Damian Mom',childName:'Damian',displayName:'Damian',grade:'3',phone:'+27768224643',credit:0,accountId:'WAL-0002'},
+      {id:'P-003',qrId:'CC-P-003',profileType:'child',parentName:'Gali and Opfuna Mom',childName:'Gali/Opfuna',displayName:'Gali/Opfuna',grade:'6',phone:'+27818092014',credit:0,accountId:'WAL-0003'}
+    ],
+    wallets:[
+      {id:'WAL-0001',label:'Akami Family',balance:0,members:['P-001']},
+      {id:'WAL-0002',label:'Damian Family',balance:0,members:['P-002']},
+      {id:'WAL-0003',label:'Gali and Opfuna Family',balance:0,members:['P-003']}
     ],
     orders:[],
     rewardsLog:[]
@@ -55,6 +66,7 @@ if(!DB){
   }catch(e){}
 }
 if(!DB)DB=defaultDB();
+if(!DB.settings||typeof DB.settings!=='object')DB.settings={};
 if(!DB.settings.lowStockAt)DB.settings.lowStockAt=5;
 if(!DB.settings.notifyEnabled)DB.settings.notifyEnabled='YES';
 if(!DB.settings.notifyLowStock)DB.settings.notifyLowStock='YES';
@@ -63,7 +75,103 @@ if(!DB.settings.notifyInactive)DB.settings.notifyInactive='YES';
 if(!DB.settings.role)DB.settings.role='owner';
 if(typeof DB.settings.onboarded!=='boolean')DB.settings.onboarded=false;
 if(!DB.settings.operatorName)DB.settings.operatorName='';
-DB.customers.forEach(c=>{if(!c.qrId)c.qrId='CC-'+c.id;if(typeof c.credit!=='number')c.credit=0;});
+if(typeof DB.settings.googleClientId!=='string')DB.settings.googleClientId='';
+if(typeof DB.settings.cloudRestorePrompted!=='boolean')DB.settings.cloudRestorePrompted=false;
+if(!Array.isArray(DB.customers))DB.customers=[];
+if(!Array.isArray(DB.orders))DB.orders=[];
+if(!Array.isArray(DB.products))DB.products=[];
+if(!Array.isArray(DB.rewardsLog))DB.rewardsLog=[];
+if(!Array.isArray(DB.wallets))DB.wallets=[];
+
+function normalizeGradeValue(v){
+  const digits=String(v??'').replace(/\D/g,'');
+  return digits?digits:'';
+}
+function normalizeProfileType(v){
+  return String(v||'').toLowerCase()==='adult'?'adult':'child';
+}
+function customerDisplayName(c){
+  if(!c)return 'Customer';
+  const name=String(c.displayName||c.childName||c.parentName||c.id||'Customer').trim();
+  return name||'Customer';
+}
+function customerSubtitle(c){
+  if(!c)return '';
+  if(c.profileType==='adult'){
+    return c.parentName?`Adult • Contact: ${c.parentName}`:'Adult account';
+  }
+  const gradePart=c.grade?`Grade ${c.grade}`:'No grade';
+  return `${gradePart}${c.parentName?` • Guardian: ${c.parentName}`:''}`;
+}
+function walletLabelFromCustomer(c){
+  const base=(c.parentName||c.displayName||c.childName||`Wallet ${c.id||''}`).trim();
+  return base||'Family Wallet';
+}
+function nextWalletId(){
+  const max=DB.wallets.reduce((m,w)=>{
+    const n=Number(String(w.id||'').replace(/\D/g,''))||0;
+    return Math.max(m,n);
+  },0);
+  return 'WAL-'+String(max+1).padStart(4,'0');
+}
+function findWalletById(id){
+  return DB.wallets.find(w=>String(w.id)===String(id));
+}
+function ensureWallet(id,label,openingBalance=0){
+  let wallet=findWalletById(id);
+  if(wallet)return wallet;
+  wallet={
+    id:id||nextWalletId(),
+    label:String(label||'Family Wallet').trim()||'Family Wallet',
+    balance:Math.max(0,Number(openingBalance)||0),
+    members:[]
+  };
+  DB.wallets.push(wallet);
+  return wallet;
+}
+function syncWalletMembers(walletId){
+  const wallet=findWalletById(walletId);
+  if(!wallet)return;
+  if(!Array.isArray(wallet.members))wallet.members=[];
+  wallet.members=[...new Set(wallet.members.map(v=>String(v||'').trim()).filter(Boolean))];
+  wallet.balance=Math.max(0,Number(wallet.balance)||0);
+  DB.customers.forEach(c=>{
+    if(String(c.accountId)!==String(wallet.id))return;
+    if(!wallet.members.includes(c.id))wallet.members.push(c.id);
+    c.credit=wallet.balance;
+  });
+}
+function normalizeCustomerWalletState(){
+  DB.wallets=DB.wallets.map((w,i)=>({
+    id:String(w.id||('WAL-'+String(i+1).padStart(4,'0'))),
+    label:String(w.label||'Family Wallet').trim()||'Family Wallet',
+    balance:Math.max(0,Number(w.balance)||0),
+    members:Array.isArray(w.members)?w.members.map(m=>String(m||'').trim()).filter(Boolean):[]
+  }));
+  DB.customers=DB.customers.map((c,i)=>{
+    const id=String(c.id||('P-'+String(i+1).padStart(3,'0')));
+    const profileType=normalizeProfileType(c.profileType);
+    const childName=String(c.childName||c.displayName||c.parentName||'').trim();
+    const parentName=String(c.parentName||'').trim();
+    const displayName=String(c.displayName||childName||parentName||id).trim()||id;
+    const grade=profileType==='adult'?'':normalizeGradeValue(c.grade);
+    const phone=String(c.phone||'').trim();
+    const qrId=String(c.qrId||('CC-'+id)).trim();
+    const seedCredit=Math.max(0,Number(c.credit)||0);
+    const accountId=String(c.accountId||'').trim();
+    return {id,qrId,profileType,parentName,childName,displayName,grade,phone,credit:seedCredit,accountId};
+  });
+  DB.customers.forEach(c=>{
+    let wallet=findWalletById(c.accountId);
+    if(!wallet){
+      wallet=ensureWallet(nextWalletId(),walletLabelFromCustomer(c),Math.max(0,Number(c.credit)||0));
+      c.accountId=wallet.id;
+    }
+    if(!wallet.members.includes(c.id))wallet.members.push(c.id);
+  });
+  DB.wallets.forEach(w=>syncWalletMembers(w.id));
+}
+normalizeCustomerWalletState();
 function saveLocal(){try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}}
 let ALERTS=(()=>{try{const r=localStorage.getItem(ALERTS_KEY);return r?JSON.parse(r):null;}catch(e){return null;}})();
 if(!ALERTS){
@@ -98,7 +206,18 @@ function saveOutbox(){
   window.OUTBOX=OUTBOX;
   try{localStorage.setItem(OUTBOX_KEY,JSON.stringify(OUTBOX));}catch(e){}
 }
-function orderSig(o){return [o.date,o.parentName,o.product,Number(o.qty)||1,Number(o.unitPrice)||0,Number(o.total)||0,o.payment||'Cash',o.status||'Paid'].join('|');}
+function orderSig(o){
+  return [
+    o.date,
+    o.customerId||o.parentName,
+    o.product,
+    Number(o.qty)||1,
+    Number(o.unitPrice)||0,
+    Number(o.total)||0,
+    o.payment||'Cash',
+    o.status||'Paid'
+  ].join('|');
+}
 function rewardSig(r){return [r.date,r.parentName,r.childName,r.type].join('|');}
 function applySettingLocally(k,v){
   if(k==='threshold')DB.settings.threshold=Number(v)||10;
@@ -109,6 +228,8 @@ function applySettingLocally(k,v){
   if(k==='notifyLowStock')DB.settings.notifyLowStock=v;
   if(k==='notifyRewards')DB.settings.notifyRewards=v;
   if(k==='notifyInactive')DB.settings.notifyInactive=v;
+  if(k==='googleClientId')DB.settings.googleClientId=String(v||'').trim();
+  if(k==='cloudRestorePrompted')DB.settings.cloudRestorePrompted=String(v||'').toLowerCase()==='true';
 }
 function mergeOutboxIntoDB(){
   OUTBOX.forEach(item=>{
@@ -132,6 +253,7 @@ function mergeOutboxIntoDB(){
       applySettingLocally(p.key,p.value);
     }
   });
+  normalizeCustomerWalletState();
 }
 function queueOperation(action,payload){
   if(action==='updateSettings'){
@@ -198,11 +320,17 @@ async function loadFromSheets(background=false){
   try{
     const data=await apiCall({action:'getAll'});
     if(data.customers?.length){
-      DB.customers=data.customers.filter(r=>r.parentName&&String(r.parentName).trim()).map((r,i)=>({
+      DB.customers=data.customers.filter(r=>(r.parentName&&String(r.parentName).trim())||(r.childName&&String(r.childName).trim())||(r.displayName&&String(r.displayName).trim())).map((r,i)=>({
         id:'P-'+String(i+1).padStart(3,'0'),
         qrId:String(r.qrId||'CC-P-'+String(i+1).padStart(3,'0')).trim(),
-        parentName:String(r.parentName).trim(),childName:String(r.childName||'').trim(),
-        grade:String(r.grade||'').trim(),phone:String(r.phone||'').trim()
+        profileType:normalizeProfileType(r.profileType),
+        parentName:String(r.parentName||'').trim(),
+        childName:String(r.childName||r.displayName||r.parentName||'').trim(),
+        displayName:String(r.displayName||r.childName||r.parentName||'').trim(),
+        grade:normalizeGradeValue(r.grade),
+        phone:String(r.phone||'').trim(),
+        accountId:String(r.accountId||'').trim(),
+        credit:Math.max(0,Number(r.credit)||0)
       }));
     }
     if(data.products?.length){
@@ -212,11 +340,17 @@ async function loadFromSheets(background=false){
       }));
     }
     if(data.orders?.length){
-      DB.orders=data.orders.filter(r=>r.parentName&&String(r.parentName).trim()).map((r,i)=>({
+      DB.orders=data.orders.filter(r=>(r.parentName&&String(r.parentName).trim())||(r.customerName&&String(r.customerName).trim())).map((r,i)=>({
         id:'ORD-'+String(i+1).padStart(4,'0'),date:String(r.date||'').substring(0,10),
-        parentName:String(r.parentName||'').trim(),product:String(r.product||'').trim(),
+        parentName:String(r.parentName||r.customerName||'').trim(),
+        customerName:String(r.customerName||r.parentName||'').trim(),
+        customerId:String(r.customerId||'').trim(),
+        accountId:String(r.accountId||'').trim(),
+        product:String(r.product||'').trim(),
         qty:Number(r.qty)||1,unitPrice:Number(r.unitPrice)||0,total:Number(r.total)||0,
-        payment:String(r.payment||'Cash').trim(),status:String(r.status||'Paid').trim()
+        payment:String(r.payment||'Cash').trim(),status:String(r.status||'Paid').trim(),
+        creditUsed:Math.max(0,Number(r.creditUsed)||0),
+        cashPaid:Math.max(0,Number(r.cashPaid)||Math.max(0,(Number(r.total)||0)-(Number(r.creditUsed)||0)))
       }));
     }
     if(data.settings?.length){
@@ -226,6 +360,7 @@ async function loadFromSheets(background=false){
       });
     }
     mergeOutboxIntoDB();
+    normalizeCustomerWalletState();
     saveLocal();
     setSyncStatus(OUTBOX.length?'syncing':'ok');
     refreshVisibleScreen();
@@ -326,8 +461,47 @@ function daysSince(dateStr){
   const ms=now.getTime()-d.getTime();
   return Math.max(0,Math.floor(ms/86400000));
 }
+function customerOrderKey(cust){
+  if(!cust)return '';
+  if(cust.id)return 'id:'+String(cust.id).trim();
+  return 'name:'+String(cust.parentName||'').trim().toLowerCase();
+}
+function orderBelongsToCustomer(order,cust){
+  if(!order||!cust)return false;
+  if(order.customerId&&cust.id)return String(order.customerId)===String(cust.id);
+  return String(order.parentName||'').trim().toLowerCase()===String(cust.parentName||'').trim().toLowerCase();
+}
+function orderCustomerLabel(order){
+  if(!order)return 'Customer';
+  if(order.customerName&&String(order.customerName).trim())return String(order.customerName).trim();
+  if(order.customerId){
+    const c=DB.customers.find(x=>String(x.id)===String(order.customerId));
+    if(c)return customerDisplayName(c);
+  }
+  return String(order.parentName||'Customer').trim()||'Customer';
+}
+function walletForCustomer(cust,autoCreate=false){
+  if(!cust)return null;
+  let wallet=findWalletById(cust.accountId);
+  if(!wallet&&autoCreate){
+    wallet=ensureWallet(nextWalletId(),walletLabelFromCustomer(cust),Math.max(0,Number(cust.credit)||0));
+    cust.accountId=wallet.id;
+    if(!wallet.members.includes(cust.id))wallet.members.push(cust.id);
+  }
+  return wallet||null;
+}
+function customerBalance(cust){
+  const wallet=walletForCustomer(cust,false);
+  if(wallet)return Math.max(0,Number(wallet.balance)||0);
+  return Math.max(0,Number(cust?.credit||0));
+}
+function getCustomerOrderCount(cust,co){
+  const map=co||orderCounts();
+  const key=customerOrderKey(cust);
+  return Number(map[key]||0);
+}
 function customerOrders(cust){
-  return DB.orders.filter(o=>o.parentName===cust.parentName);
+  return DB.orders.filter(o=>orderBelongsToCustomer(o,cust));
 }
 function customerSpend(cust){
   return customerOrders(cust).reduce((s,o)=>s+(Number(o.total)||0),0);
@@ -367,7 +541,7 @@ function buildPromoBrain(){
     if(avgSpend>0&&spend>=avgSpend*1.2){score+=2;reasons.push('high spender');}
     if(score===0){score=1;reasons.push('general promo');}
     return {
-      id:c.id,parentName:c.parentName,phone:c.phone,score,reasons,
+      id:c.id,name:customerDisplayName(c),phone:c.phone,score,reasons,
       shortReason:reasons.slice(0,2).join(', '),
       orderCount,spend,inactiveDays
     };
@@ -400,7 +574,7 @@ function renderPromoBrain(){
     return;
   }
   listEl.innerHTML=promoBrainCache.targets.slice(0,5).map(t=>
-    `<div class="brain-item"><strong>${escHtml(t.parentName)}</strong><span>${escHtml(t.shortReason)}</span></div>`
+    `<div class="brain-item"><strong>${escHtml(t.name||'Customer')}</strong><span>${escHtml(t.shortReason)}</span></div>`
   ).join('');
 }
 function applyPromoBrain(){
@@ -449,7 +623,7 @@ function copyBroadcastPack(){
     `Targets: ${recipients.length}`,
     '',
     'Numbers:',
-    ...recipients.map(c=>`${c.parentName} - ${c.phone}`),
+    ...recipients.map(c=>`${customerDisplayName(c)} - ${c.phone}`),
     '',
     'Message:',
     msg
@@ -523,14 +697,14 @@ async function requestCameraAccess(){
   }catch(err){
     const text=String(err&&err.message||'').toLowerCase();
     if(text.includes('denied')||text.includes('permission')){
-      return {ok:false,msg:'?? Camera permission denied. Use Select Student.'};
+      return {ok:false,msg:'?? Camera permission denied. Use Select Customer.'};
     }
-    return {ok:false,msg:'?? Camera unavailable right now. Use Select Student.'};
+    return {ok:false,msg:'?? Camera unavailable right now. Use Select Customer.'};
   }
 }
 async function startScan(){
   if(typeof Html5Qrcode==='undefined'){
-    toast('\u26A0\uFE0F Scanner unavailable offline. Use Select Student.','er');
+    toast('\u26A0\uFE0F Scanner unavailable offline. Use Select Customer.','er');
     startFlow('select');
     return;
   }
@@ -554,24 +728,150 @@ async function startScan(){
   html5QrCode.start({facingMode:'environment'},{fps:10,qrbox:{width:200,height:200},aspectRatio:1.0},
     (decoded)=>{html5QrCode.stop().then(()=>{html5QrCode=null;handleScan(decoded);});},
     ()=>{}
-  ).catch(()=>{toast('\u26A0\uFE0F Camera denied. Use Select Student.','er');cancelFlow();});
+  ).catch(()=>{toast('\u26A0\uFE0F Camera denied. Use Select Customer.','er');cancelFlow();});
 }
 function stopScan(){if(html5QrCode){try{html5QrCode.stop();}catch(e){}html5QrCode=null;}cancelFlow();}
+function formatGradeInput(v){
+  return normalizeGradeValue(v);
+}
+function setCustomerTypeUI(prefix){
+  const type=(document.getElementById(prefix+'-type')?.value||'child').toLowerCase();
+  const nameLabel=document.getElementById(prefix+'-name-label');
+  const parentWrap=document.getElementById(prefix+'-parent-wrap');
+  const gradeWrap=document.getElementById(prefix+'-grade-wrap');
+  const gradeInput=document.getElementById(prefix+'-grade');
+  if(nameLabel)nameLabel.textContent=type==='adult'?'Adult Name':'Child Name';
+  if(parentWrap)parentWrap.style.display=type==='adult'?'none':'block';
+  if(gradeWrap)gradeWrap.style.display=type==='adult'?'none':'block';
+  if(type==='adult'&&gradeInput)gradeInput.value='';
+}
+function renderWalletOptions(prefix){
+  const sel=document.getElementById(prefix+'-wallet-existing');
+  if(!sel)return;
+  const opts=DB.wallets.map(w=>`<option value="${escHtml(String(w.id))}">${escHtml(w.label)} (R${Math.max(0,Number(w.balance)||0)})</option>`);
+  sel.innerHTML=opts.length?opts.join(''):'<option value="">No wallets yet</option>';
+}
+function resetCustomerForm(prefix){
+  const defaults={
+    type:'child',
+    'wallet-mode':'new'
+  };
+  Object.entries(defaults).forEach(([k,v])=>{
+    const el=document.getElementById(prefix+'-'+k);
+    if(el)el.value=v;
+  });
+  ['pname','cname','grade','phone','wallet-name'].forEach(k=>{
+    const el=document.getElementById(prefix+'-'+k);
+    if(el)el.value='';
+  });
+  const credit=document.getElementById(prefix+'-credit');
+  if(credit)credit.value='0';
+}
+function toggleWalletMode(prefix){
+  const mode=(document.getElementById(prefix+'-wallet-mode')?.value||'new').toLowerCase();
+  const newWrap=document.getElementById(prefix+'-wallet-name-wrap');
+  const existingWrap=document.getElementById(prefix+'-wallet-existing-wrap');
+  if(newWrap)newWrap.style.display=mode==='existing'?'none':'block';
+  if(existingWrap)existingWrap.style.display=mode==='existing'?'block':'none';
+  if(mode==='existing')renderWalletOptions(prefix);
+}
+function prepCustomerForm(prefix){
+  setCustomerTypeUI(prefix);
+  toggleWalletMode(prefix);
+}
+function createCustomerFromForm(prefix,opts={}){
+  const type=normalizeProfileType(document.getElementById(prefix+'-type')?.value||'child');
+  const personName=String(document.getElementById(prefix+'-cname')?.value||'').trim();
+  const parentName=type==='adult'?'':String(document.getElementById(prefix+'-pname')?.value||'').trim();
+  const phoneRaw=String(document.getElementById(prefix+'-phone')?.value||'').trim();
+  const phone=(typeof window.formatSouthAfricanPhone==='function'?window.formatSouthAfricanPhone(phoneRaw):phoneRaw);
+  const grade=type==='adult'?'':formatGradeInput(document.getElementById(prefix+'-grade')?.value||'');
+  const topup=Math.max(0,Number(document.getElementById(prefix+'-credit')?.value||0));
+  if(!personName){
+    toast(type==='adult'?'Adult name required':'Child name required','er');
+    return null;
+  }
+  if(type==='child'&&!grade){
+    toast('Grade number required for child accounts','er');
+    return null;
+  }
+  const mode=(document.getElementById(prefix+'-wallet-mode')?.value||'new').toLowerCase();
+  let wallet=null;
+  if(mode==='existing'){
+    const wid=String(document.getElementById(prefix+'-wallet-existing')?.value||'').trim();
+    wallet=findWalletById(wid);
+    if(!wallet){
+      toast('Select an existing wallet','er');
+      return null;
+    }
+  }else{
+    const customLabel=String(document.getElementById(prefix+'-wallet-name')?.value||'').trim();
+    const fallback=parentName||personName;
+    wallet=ensureWallet(nextWalletId(),customLabel||`${fallback} Wallet`,0);
+  }
+  const id='P-'+String(DB.customers.length+1).padStart(3,'0');
+  const qrId=String(opts.qrId||('CC-P-'+String(DB.customers.length+1).padStart(3,'0')+'-'+Date.now())).trim();
+  const cust={
+    id,
+    qrId,
+    profileType:type,
+    parentName,
+    childName:personName,
+    displayName:personName,
+    grade,
+    phone,
+    accountId:String(wallet.id),
+    credit:Math.max(0,Number(wallet.balance)||0)
+  };
+  if(topup>0){
+    wallet.balance=Math.max(0,Number(wallet.balance)||0)+topup;
+  }
+  if(!wallet.members.includes(id))wallet.members.push(id);
+  DB.customers.push(cust);
+  syncWalletMembers(wallet.id);
+  saveLocal();
+  pushCustomer(cust);
+  // Keep outbox records compact and deterministic.
+  const clean=DB.customers.find(c=>c.id===id);
+  return clean||cust;
+}
+function topUpWalletByCustomerId(id){
+  const cust=DB.customers.find(c=>String(c.id)===String(id));
+  if(!cust){toast('Customer not found','er');return;}
+  const wallet=walletForCustomer(cust,true);
+  if(!wallet){toast('Wallet not found','er');return;}
+  const amountRaw=prompt(`Top up "${wallet.label}" (Current R${Math.max(0,Number(wallet.balance)||0)}):`,'0');
+  if(amountRaw===null)return;
+  const amount=Math.max(0,Number(amountRaw));
+  if(!amount){toast('Enter a valid amount','er');return;}
+  wallet.balance=Math.max(0,Number(wallet.balance)||0)+amount;
+  syncWalletMembers(wallet.id);
+  saveLocal();
+  refreshVisibleScreen();
+  toast(`✅ Wallet topped up by R${amount}`,'ok');
+}
 function handleScan(qrId){
-  const found=DB.customers.find(c=>c.qrId===qrId);
-  if(found){toast(`\uD83D\uDC4B Welcome back, ${found.parentName}!`,'ok');pickCust(found);}
-  else{hide('v-qr');show('v-new-customer');document.getElementById('nc-qrid').value=qrId;document.getElementById('nc-pname').focus();}
+  const id=String(qrId||'').trim();
+  const found=DB.customers.find(c=>String(c.qrId||'').trim()===id);
+  if(found){
+    toast(`\uD83D\uDC4B Welcome back, ${customerDisplayName(found)}!`,'ok');
+    pickCust(found);
+    return;
+  }
+  hide('v-qr');
+  show('v-new-customer');
+  resetCustomerForm('nc');
+  document.getElementById('nc-qrid').value=id||('CC-'+Date.now());
+  prepCustomerForm('nc');
+  document.getElementById('nc-cname')?.focus();
 }
 function registerNewFromScan(){
-  const pn=document.getElementById('nc-pname').value.trim();
-  if(!pn){toast('Parent name required','er');return;}
-  const qrId=document.getElementById('nc-qrid').value||('CC-'+Date.now());
-  const cust={id:'P-'+String(DB.customers.length+1).padStart(3,'0'),qrId,parentName:pn,
-    childName:document.getElementById('nc-cname').value.trim(),
-    grade:document.getElementById('nc-grade').value.trim(),
-    phone:document.getElementById('nc-phone').value.trim()};
-  DB.customers.push(cust);saveLocal();pushCustomer(cust);
-  hide('v-new-customer');toast(`\u2705 ${pn} registered!`,'ok');pickCust(cust);
+  const created=createCustomerFromForm('nc',{qrId:document.getElementById('nc-qrid').value||('CC-'+Date.now())});
+  if(!created)return;
+  resetCustomerForm('nc');
+  hide('v-new-customer');
+  toast(`\u2705 ${customerDisplayName(created)} registered!`,'ok');
+  pickCust(created);
 }
 
 //  SELL FLOW 
@@ -591,21 +891,25 @@ function renderStudentList(){
   const q=(document.getElementById('stuSearch')?.value||'').toLowerCase();
   const el=document.getElementById('stuList');
   const co=orderCounts();
-  const fx=DB.customers.filter(c=>c.parentName.toLowerCase().includes(q)||c.childName.toLowerCase().includes(q));
-  if(!fx.length){el.innerHTML='<div class="empty" style="padding:20px"><div class="ei">&#128270;</div><p>No students found</p></div>';return;}
+  const fx=DB.customers.filter(c=>{
+    const blob=[c.parentName,c.childName,c.displayName,c.phone,c.grade,c.profileType].join(' ').toLowerCase();
+    return blob.includes(q);
+  });
+  if(!fx.length){el.innerHTML='<div class="empty" style="padding:20px"><div class="ei">&#128270;</div><p>No customers found</p></div>';return;}
   el.innerHTML=fx.map(c=>{
-    const n=co[c.parentName]||0,done=n>=DB.settings.threshold;
+    const n=getCustomerOrderCount(c,co),done=n>=DB.settings.threshold;
     return `<div class="sitem" onclick='pickCust(${JSON.stringify(c)})'>
-      <div><div class="nm">${c.parentName}</div><div class="sb">${c.childName} &#8226; ${c.grade}</div></div>
+      <div><div class="nm">${escHtml(customerDisplayName(c))}</div><div class="sb">${escHtml(customerSubtitle(c))}</div></div>
       <span class="badge ${done?'gold':''}">${done?'&#127881; Reward!':n+' orders'}</span>
     </div>`;
   }).join('');
 }
 function pickCust(c){
-  selCust=c;selProd=null;qty=1;
-  document.getElementById('coName').textContent=c.parentName;
+  const full=DB.customers.find(x=>String(x.id)===String(c.id))||c;
+  selCust=full;selProd=null;qty=1;
+  document.getElementById('coName').textContent=customerDisplayName(full);
   const creditEl=document.getElementById('coCredit');
-  if(creditEl)creditEl.textContent='Credit: R'+Math.max(0,Number(c.credit||0));
+  if(creditEl)creditEl.textContent='Wallet: R'+customerBalance(full);
   hide('v-qr');hide('v-select');hide('v-home');hide('v-new-customer');show('v-checkout');
   renderProdGrid();updReceipt();
 }
@@ -635,20 +939,28 @@ function updReceipt(){
 function recordSale(){
   if(!selProd||!selCust)return;
   const currentCust=DB.customers.find(c=>c.id===selCust.id)||selCust;
-  const availableCredit=Math.max(0,Number(currentCust.credit||0));
+  const wallet=walletForCustomer(currentCust,true);
+  const availableCredit=wallet?Math.max(0,Number(wallet.balance)||0):Math.max(0,Number(currentCust.credit||0));
   const grossTotal=qty*selProd.price;
   const creditUsed=Math.min(availableCredit,grossTotal);
   const cashPaid=Math.max(0,grossTotal-creditUsed);
   const order={id:'ORD-'+String(DB.orders.length+1).padStart(4,'0'),date:today(),
-    parentName:selCust.parentName,product:selProd.name,qty,unitPrice:selProd.price,
+    parentName:customerDisplayName(currentCust),customerName:customerDisplayName(currentCust),
+    customerId:String(currentCust.id||''),accountId:String(currentCust.accountId||wallet?.id||''),
+    product:selProd.name,qty,unitPrice:selProd.price,
     total:grossTotal,payment,status:'Paid',creditUsed,cashPaid};
   DB.orders.push(order);
-  currentCust.credit=Math.max(0,availableCredit-creditUsed);
+  if(wallet){
+    wallet.balance=Math.max(0,availableCredit-creditUsed);
+    syncWalletMembers(wallet.id);
+  }else{
+    currentCust.credit=Math.max(0,availableCredit-creditUsed);
+  }
   const prod=DB.products.find(p=>p.id===selProd.id);
   if(prod)prod.stock=Math.max(0,prod.stock-qty);
   saveLocal();pushOrder(order);
-  const cnt=DB.orders.filter(o=>o.parentName===selCust.parentName).length;
-  const cust=selCust;cancelFlow();
+  const cnt=getCustomerOrderCount(currentCust);
+  const cust=currentCust;cancelFlow();
   if(cnt===DB.settings.threshold)showRewardPopup(cust,cnt);
   else{
     const rem=DB.settings.threshold-cnt;
@@ -657,16 +969,16 @@ function recordSale(){
   evaluateOperationalAlerts();
 }
 function showRewardPopup(cust,cnt){
-  document.getElementById('popSub').textContent=`${cust.parentName} has reached ${cnt} purchases!`;
+  document.getElementById('popSub').textContent=`${customerDisplayName(cust)} has reached ${cnt} purchases!`;
   document.getElementById('popMsg').textContent=DB.settings.rewardMsg;
   const waLink=cust.phone?`https://wa.me/${cust.phone.replace(/\D/g,'')}?text=${encodeURIComponent(DB.settings.rewardMsg)}`:'#';
   const waBtn=document.getElementById('popWaBtn');
   waBtn.href=waLink;
   waBtn.style.display=cust.phone?'flex':'none';
   document.getElementById('rewardOverlay').classList.add('show');
-  const reward={date:today(),parentName:cust.parentName,childName:cust.childName,type:'Free Ice Cream'};
+  const reward={date:today(),parentName:customerDisplayName(cust),childName:cust.childName,type:'Free Ice Cream'};
   DB.rewardsLog.push(reward);saveLocal();pushReward(reward);
-  addAppAlert('reward',`Reward unlocked: ${cust.parentName}`,`${cust.childName||'Customer'} reached ${cnt}/${DB.settings.threshold}.`,`reward-popup:${cust.id}:${today()}`);
+  addAppAlert('reward',`Reward unlocked: ${customerDisplayName(cust)}`,`${cust.childName||'Customer'} reached ${cnt}/${DB.settings.threshold}.`,`reward-popup:${cust.id}:${today()}`);
 }
 function closeReward(){document.getElementById('rewardOverlay').classList.remove('show');toast('\uD83C\uDF89 Reward logged!','rw');}
 function renderRecent(){
@@ -674,7 +986,7 @@ function renderRecent(){
   const recent=[...DB.orders].reverse().slice(0,10);
   if(!recent.length){el.innerHTML='<div class="empty"><div class="ei">&#128221;</div><h3>No sales yet</h3><p>Tap above to record your first sale!</p></div>';return;}
   el.innerHTML=recent.map(o=>`<div class="sale-item">
-    <div><div class="si-name">${o.parentName}</div><div class="si-sub">${o.product} &#215; ${o.qty} &#8226; ${o.date} &#8226; ${o.payment}</div></div>
+    <div><div class="si-name">${escHtml(orderCustomerLabel(o))}</div><div class="si-sub">${escHtml(o.product)} &#215; ${o.qty} &#8226; ${escHtml(o.date)} &#8226; ${escHtml(o.payment)}</div></div>
     <div class="si-amt">R${o.total}</div>
   </div>`).join('');
 }
@@ -682,29 +994,29 @@ function renderRecent(){
 //  LOYALTY 
 function renderLoy(){
   const thresh=DB.settings.threshold,co=orderCounts();
-  const earned=DB.customers.filter(c=>(co[c.parentName]||0)>=thresh);
+  const earned=DB.customers.filter(c=>getCustomerOrderCount(c,co)>=thresh);
   const banDiv=document.getElementById('loyBanners');
   if(earned.length){
     banDiv.innerHTML=`<div class="reward-banner"><h3>&#127881; Ready for Reward (${earned.length})</h3>
       ${earned.map(c=>`<div class="reward-item">
-        <div><div style="font-weight:700;font-size:13px">${c.parentName}</div><div style="font-size:11px;color:var(--text-3)">${c.childName}</div></div>
+        <div><div style="font-weight:700;font-size:13px">${escHtml(customerDisplayName(c))}</div><div style="font-size:11px;color:var(--text-3)">${escHtml(customerSubtitle(c))}</div></div>
         ${c.phone?`<a class="wa-btn" href="https://wa.me/${c.phone.replace(/\D/g,'')}?text=${encodeURIComponent(DB.settings.rewardMsg)}" target="_blank">&#128241; WhatsApp</a>`:'<span class="badge">No number</span>'}
       </div>`).join('')}</div>`;
   }else{banDiv.innerHTML='';}
   const listEl=document.getElementById('loyList');
-  const sorted=[...DB.customers].sort((a,b)=>(co[b.parentName]||0)-(co[a.parentName]||0));
+  const sorted=[...DB.customers].sort((a,b)=>getCustomerOrderCount(b,co)-getCustomerOrderCount(a,co));
   if(!sorted.length){listEl.innerHTML='<div class="empty"><div class="ei">&#127942;</div><h3>No customers yet</h3></div>';return;}
   listEl.innerHTML=sorted.map(c=>{
-    const n=co[c.parentName]||0,pct=Math.min(100,Math.round((n/thresh)*100)),done=n>=thresh;
+    const n=getCustomerOrderCount(c,co),pct=Math.min(100,Math.round((n/thresh)*100)),done=n>=thresh;
     return `<div class="lrow">
-      <div class="lavatar">${c.parentName[0]}</div>
+      <div class="lavatar">${escHtml(customerDisplayName(c).charAt(0)||'C')}</div>
       <div class="linfo">
-        <div class="ln">${c.parentName}</div><div class="lc">${c.childName}  ${c.grade}</div>
+        <div class="ln">${escHtml(customerDisplayName(c))}</div><div class="lc">${escHtml(customerSubtitle(c))}</div>
         ${!done?`<div class="pbar-wrap"><div class="pbar" style="width:${pct}%"></div></div>`:''}
       </div>
       <div class="lright">
         ${done?`<span class="badge gold">&#127881; ${n}/${thresh}</span>`:`<div class="lcount">${n}/${thresh}</div><div class="lsub">purchases</div>`}
-        <div style="margin-top:4px"><button class="btn btn-ghost btn-sm" onclick="showLoyaltyCard(DB.customers.find(x=>x.parentName===\'${c.parentName}\'))">&#127903; Card</button></div>
+        <div style="margin-top:4px"><button class="btn btn-ghost btn-sm" onclick="showLoyaltyCardById('${c.id}')">&#127903; Card</button></div>
       </div>
     </div>`;
   }).join('');
@@ -714,13 +1026,13 @@ function renderLoy(){
 function showLoyaltyCard(cust){
   if(!cust)return;
   const co=orderCounts();
-  const n=co[cust.parentName]||0;
+  const n=getCustomerOrderCount(cust,co);
   const thresh=DB.settings.threshold;
   const stamps=Array.from({length:thresh},(_,i)=>`<div class="lc-stamp ${i<n?'filled':''}"><span>${i<n?'&#127846;':'&#9675;'}</span></div>`).join('');
   document.getElementById('loyaltyCardContent').innerHTML=`
     <div class="loyalty-card-wrap">
-      <div class="lc-name">${cust.parentName}</div>
-      <div class="lc-child">&#128103; ${cust.childName} &#8226; ${cust.grade}</div>
+      <div class="lc-name">${escHtml(customerDisplayName(cust))}</div>
+      <div class="lc-child">&#128103; ${escHtml(customerSubtitle(cust))}</div>
       <div class="lc-stamps">${stamps}</div>
       <div class="lc-progress">
         ${n>=thresh?'&#127881; <strong>Reward Earned!</strong> Claim your free ice cream!':
@@ -737,18 +1049,18 @@ function showParentPortal(qrId){
   const cust=DB.customers.find(c=>c.qrId===qrId);
   if(!cust){document.getElementById('parentPortalContent').innerHTML='<div class="empty"><div class="ei">&#10067;</div><h3>Customer not found</h3></div>';document.getElementById('parentPortalOverlay').classList.add('show');return;}
   const co=orderCounts();
-  const n=co[cust.parentName]||0,thresh=DB.settings.threshold;
+  const n=getCustomerOrderCount(cust,co),thresh=DB.settings.threshold;
   const pct=Math.min(100,Math.round((n/thresh)*100));
   const stamps=Array.from({length:thresh},(_,i)=>`<div class="lc-stamp ${i<n?'filled':''}" style="width:32px;height:32px;font-size:16px"><span>${i<n?'&#127846;':'&#9675;'}</span></div>`).join('');
   document.getElementById('parentPortalContent').innerHTML=`
     <div style="text-align:center;margin-bottom:16px">
       <img src="${LOGO_SRC}" style="width:86px;height:52px;object-fit:contain;mix-blend-mode:multiply;filter:drop-shadow(0 6px 12px rgba(15,85,101,.24));margin-bottom:8px">
-      <div style="font-family:'Baloo 2','Segoe UI',Tahoma,sans-serif;font-size:18px;font-weight:800;color:var(--teal)">Hi, ${cust.childName}! &#128075;</div>
-      <div style="font-size:12px;color:var(--text-3)">${cust.grade}</div>
+      <div style="font-family:'Baloo 2','Segoe UI',Tahoma,sans-serif;font-size:18px;font-weight:800;color:var(--teal)">Hi, ${escHtml(customerDisplayName(cust))}! &#128075;</div>
+      <div style="font-size:12px;color:var(--text-3)">${escHtml(customerSubtitle(cust))}</div>
     </div>
     <div class="loyalty-card-wrap" style="margin-bottom:0">
-      <div class="lc-name">${cust.parentName}</div>
-      <div class="lc-child">&#128103; ${cust.childName}</div>
+      <div class="lc-name">${escHtml(customerDisplayName(cust))}</div>
+      <div class="lc-child">&#128103; ${escHtml(cust.childName)}</div>
       <div class="lc-stamps">${stamps}</div>
       <div class="lc-progress">${n>=thresh?'&#127881; <strong>Reward Ready!</strong> You earned a free ice cream!':
         `<strong>${n}/${thresh}</strong> purchases &#8212; ${thresh-n} more to go!`}</div>
@@ -765,7 +1077,7 @@ function renderDash(){
   set('d-rev','R'+paid.reduce((s,o)=>s+o.total,0));
   set('d-ord',DB.orders.length);
   set('d-units',DB.orders.reduce((s,o)=>s+o.qty,0));
-  set('d-cust',new Set(DB.orders.map(o=>o.parentName)).size);
+  set('d-cust',new Set(DB.orders.map(o=>String(o.customerId||('name:'+String(o.parentName||'').trim().toLowerCase())))).size);
   set('d-trev','R'+todOrd.filter(o=>o.status==='Paid').reduce((s,o)=>s+o.total,0));
   set('d-tord',todOrd.length);
   set('d-rearned',Object.values(co).filter(v=>v>=thresh).length);
@@ -844,7 +1156,7 @@ function renderGradeChart(){
   const custByGrade=gradeFilter==='all'?DB.customers:DB.customers.filter(c=>c.grade===gradeFilter);
   const gradeData=grades.map(g=>{
     const custs=DB.customers.filter(c=>c.grade===g);
-    return{grade:g,total:custs.reduce((s,c)=>s+(DB.orders.filter(o=>o.parentName===c.parentName).reduce((ss,o)=>ss+o.total,0)),0)};
+    return{grade:g,total:custs.reduce((s,c)=>s+(customerOrders(c).reduce((ss,o)=>ss+Number(o.total||0),0)),0)};
   });
   const ctx=document.getElementById('chartGrades').getContext('2d');
   if(chartGrades)chartGrades.destroy();
@@ -896,8 +1208,8 @@ function renderDashInsights(){
 
   const threshold=Number(DB.settings.threshold)||10;
   const co=orderCounts();
-  const ready=DB.customers.filter(c=>(co[c.parentName]||0)>=threshold).length;
-  const close=DB.customers.filter(c=>{const n=co[c.parentName]||0;return n>=Math.max(1,threshold-2)&&n<threshold;}).length;
+  const ready=DB.customers.filter(c=>getCustomerOrderCount(c,co)>=threshold).length;
+  const close=DB.customers.filter(c=>{const n=getCustomerOrderCount(c,co);return n>=Math.max(1,threshold-2)&&n<threshold;}).length;
 
   const inactive=DB.customers.filter(c=>{
     const last=customerLastOrder(c);
@@ -911,7 +1223,7 @@ function renderDashInsights(){
   const topProduct=Object.entries(byProduct).sort((a,b)=>b[1]-a[1])[0];
   const topProductText=topProduct?`${topProduct[0]} leads with ${topProduct[1]} units sold.`:'No product trend yet.';
 
-  const activeCustomers=new Set(DB.orders.map(o=>o.parentName));
+  const activeCustomers=new Set(DB.orders.map(o=>String(o.customerId||('name:'+String(o.parentName||'').trim().toLowerCase()))));
   const repeatCustomers=[...activeCustomers].filter(name=>(co[name]||0)>1).length;
   const repeatRate=activeCustomers.size?Math.round((repeatCustomers/activeCustomers.size)*100):0;
 
@@ -953,8 +1265,14 @@ function dailyRevenue(dateStr){
 }
 function calculateBusinessHealth(){
   const totalOrders=DB.orders.length;
-  const activeCustomers=new Set(DB.orders.map(o=>o.parentName));
-  const repeatCustomers=[...activeCustomers].filter(name=>DB.orders.filter(o=>o.parentName===name).length>1).length;
+  const activeCustomers=new Set(DB.orders.map(o=>String(o.customerId||('name:'+String(o.parentName||'').trim().toLowerCase()))));
+  const repeatCustomers=[...activeCustomers].filter(key=>{
+    if(String(key).startsWith('name:')){
+      const name=String(key).slice(5);
+      return DB.orders.filter(o=>String(o.parentName||'').trim().toLowerCase()===name).length>1;
+    }
+    return DB.orders.filter(o=>String(o.customerId||'')===String(key)).length>1;
+  }).length;
   const repeatRate=activeCustomers.size?repeatCustomers/activeCustomers.size:0;
   const phoneCoverage=DB.customers.length?DB.customers.filter(c=>String(c.phone||'').trim()).length/DB.customers.length:0;
   const lowStockCount=DB.products.filter(p=>{
@@ -1002,7 +1320,7 @@ function buildActionQueue(){
   const actions=[];
   const co=orderCounts();
   const threshold=Number(DB.settings.threshold)||10;
-  const rewardReady=DB.customers.filter(c=>(co[c.parentName]||0)>=threshold).length;
+  const rewardReady=DB.customers.filter(c=>getCustomerOrderCount(c,co)>=threshold).length;
   if(rewardReady>0){
     actions.push({title:`Message ${rewardReady} reward-ready customer${rewardReady===1?'':'s'}`,desc:'Use Broadcast -> Reward filter for immediate conversion.'});
   }
@@ -1042,14 +1360,15 @@ function assistantMetrics(){
   const weekByCustomer={};
   const weekByProduct={};
   weekOrders.forEach(o=>{
-    weekByCustomer[o.parentName]=(weekByCustomer[o.parentName]||0)+Number(o.total||0);
+    const key=orderCustomerLabel(o);
+    weekByCustomer[key]=(weekByCustomer[key]||0)+Number(o.total||0);
     weekByProduct[o.product]=(weekByProduct[o.product]||0)+Number(o.qty||0);
   });
   const topCustomers=Object.entries(weekByCustomer).sort((a,b)=>b[1]-a[1]).slice(0,3);
   const topProduct=Object.entries(weekByProduct).sort((a,b)=>b[1]-a[1])[0];
   const co=orderCounts();
   const threshold=Number(DB.settings.threshold)||10;
-  const eligible=DB.customers.filter(c=>(co[c.parentName]||0)>=threshold);
+  const eligible=DB.customers.filter(c=>getCustomerOrderCount(c,co)>=threshold);
   return {todayOrders,todayRevenue,weekOrders,weekRevenue,topCustomers,topProduct,eligible,threshold};
 }
 function assistantAnswer(question){
@@ -1080,7 +1399,7 @@ function assistantAnswer(question){
   }
   if(q.includes('free')||q.includes('reward')||q.includes('qualif')){
     if(!m.eligible.length) return `No customer has reached the reward threshold (${m.threshold}) yet.`;
-    return `Reward-ready customers: ${m.eligible.map(c=>c.parentName).join(', ')}.`;
+    return `Reward-ready customers: ${m.eligible.map(c=>customerDisplayName(c)).join(', ')}.`;
   }
   return `Supported questions: "How many sales today?", "What is today's revenue?", "Weekly revenue", "Top customers this week", "Most sold product", "Who qualifies for a free ice cream?"`;
 }
@@ -1155,22 +1474,22 @@ function runGlobalSearch(){
   if(!host)return;
   if(!q){
     const top=[...DB.orders].reverse().slice(0,5);
-    host.innerHTML=top.length?top.map(o=>`<div class="cc-result"><div class="k">Recent Sale</div><div class="v">${escHtml(o.parentName)} - ${escHtml(o.product)} x${Number(o.qty)||1} (${escHtml(o.date)})</div></div>`).join('')
+    host.innerHTML=top.length?top.map(o=>`<div class="cc-result"><div class="k">Recent Sale</div><div class="v">${escHtml(orderCustomerLabel(o))} - ${escHtml(o.product)} x${Number(o.qty)||1} (${escHtml(o.date)})</div></div>`).join('')
       :'<div class="empty" style="padding:16px"><p>Type to search customers, products, orders and dates.</p></div>';
     return;
   }
   const out=[];
   DB.customers.forEach(c=>{
-    const blob=[c.parentName,c.childName,c.grade,c.phone,c.id,c.qrId].join(' ').toLowerCase();
-    if(blob.includes(q))out.push({k:'Customer',v:`${c.parentName} - ${c.childName} (${c.grade||'No grade'})`});
+    const blob=[c.parentName,c.childName,c.displayName,c.grade,c.phone,c.id,c.qrId,c.profileType,c.accountId].join(' ').toLowerCase();
+    if(blob.includes(q))out.push({k:'Customer',v:`${customerDisplayName(c)} - ${customerSubtitle(c)}`});
   });
   DB.products.forEach(p=>{
     const blob=[p.name,p.category,p.price,p.stock].join(' ').toLowerCase();
     if(blob.includes(q))out.push({k:'Product',v:`${p.name} | ${formatCurrency(p.price)} | stock ${p.stock}`});
   });
   DB.orders.forEach(o=>{
-    const blob=[o.parentName,o.product,o.date,o.payment,o.total,o.qty].join(' ').toLowerCase();
-    if(blob.includes(q))out.push({k:'Order',v:`${o.date} - ${o.parentName} - ${o.product} x${o.qty} (${formatCurrency(o.total)})`});
+    const blob=[o.parentName,o.customerName,o.customerId,o.product,o.date,o.payment,o.total,o.qty].join(' ').toLowerCase();
+    if(blob.includes(q))out.push({k:'Order',v:`${o.date} - ${orderCustomerLabel(o)} - ${o.product} x${o.qty} (${formatCurrency(o.total)})`});
   });
   if(!out.length){
     host.innerHTML='<div class="empty" style="padding:16px"><p>No matches found.</p></div>';
@@ -1195,14 +1514,14 @@ function csvEscape(v){
   return s;
 }
 function exportOrdersCsv(){
-  const cols=['id','date','parentName','product','qty','unitPrice','total','payment','status'];
+  const cols=['id','date','parentName','customerName','customerId','accountId','product','qty','unitPrice','total','payment','status','creditUsed','cashPaid'];
   const rows=DB.orders.map(o=>cols.map(c=>csvEscape(o[c])));
   const csv=[cols.join(','),...rows.map(r=>r.join(','))].join('\n');
   downloadBlob(`cathdel-orders-${today()}.csv`,csv,'text/csv;charset=utf-8');
   toast('\u2705 Orders CSV exported','ok');
 }
 function exportCustomersCsv(){
-  const cols=['id','qrId','parentName','childName','grade','phone'];
+  const cols=['id','qrId','profileType','displayName','parentName','childName','grade','phone','accountId','credit'];
   const rows=DB.customers.map(c=>cols.map(k=>csvEscape(c[k])));
   const csv=[cols.join(','),...rows.map(r=>r.join(','))].join('\n');
   downloadBlob(`cathdel-customers-${today()}.csv`,csv,'text/csv;charset=utf-8');
@@ -1214,19 +1533,32 @@ function normalizeImportedDB(raw){
     settings:{...base.settings,...(raw.settings||{})},
     products:Array.isArray(raw.products)?raw.products:base.products,
     customers:Array.isArray(raw.customers)?raw.customers:base.customers,
+    wallets:Array.isArray(raw.wallets)?raw.wallets:base.wallets,
     orders:Array.isArray(raw.orders)?raw.orders:[],
     rewardsLog:Array.isArray(raw.rewardsLog)?raw.rewardsLog:[]
   };
   out.settings.threshold=Math.max(1,Number(out.settings.threshold)||10);
   out.settings.lowStockAt=Math.max(1,Number(out.settings.lowStockAt)||5);
+  out.settings.googleClientId=String(out.settings.googleClientId||'').trim();
+  out.settings.cloudRestorePrompted=String(out.settings.cloudRestorePrompted||'false').toLowerCase()==='true';
   out.customers=out.customers.map((c,i)=>({
     id:String(c.id||('P-'+String(i+1).padStart(3,'0'))),
-    qrId:String(c.qrId||('CC-P-'+String(i+1).padStart(3,'0'))),
+    qrId:String(c.qrId||('CC-P-'+String(i+1).padStart(3,'0'))).trim(),
+    profileType:normalizeProfileType(c.profileType),
+    displayName:String(c.displayName||c.childName||c.parentName||'').trim(),
     parentName:String(c.parentName||'').trim(),
     childName:String(c.childName||'').trim(),
-    grade:String(c.grade||'').trim(),
-    phone:String(c.phone||'').trim()
-  })).filter(c=>c.parentName);
+    grade:normalizeGradeValue(c.grade),
+    phone:String(c.phone||'').trim(),
+    accountId:String(c.accountId||'').trim(),
+    credit:Math.max(0,Number(c.credit)||0)
+  })).filter(c=>c.displayName||c.childName||c.parentName);
+  out.wallets=out.wallets.map((w,i)=>({
+    id:String(w.id||('WAL-'+String(i+1).padStart(4,'0'))).trim(),
+    label:String(w.label||'Family Wallet').trim()||'Family Wallet',
+    balance:Math.max(0,Number(w.balance)||0),
+    members:Array.isArray(w.members)?w.members.map(m=>String(m||'').trim()).filter(Boolean):[]
+  }));
   out.products=out.products.map((p,i)=>({
     id:String(p.id||('PRD-'+String(i+1).padStart(2,'0'))),
     name:String(p.name||'Product '+(i+1)).trim(),
@@ -1237,18 +1569,50 @@ function normalizeImportedDB(raw){
   out.orders=out.orders.map((o,i)=>({
     id:String(o.id||('ORD-'+String(i+1).padStart(4,'0'))),
     date:String(o.date||today()).substring(0,10),
-    parentName:String(o.parentName||'').trim(),
+    parentName:String(o.parentName||o.customerName||'').trim(),
+    customerName:String(o.customerName||o.parentName||'').trim(),
+    customerId:String(o.customerId||'').trim(),
+    accountId:String(o.accountId||'').trim(),
     product:String(o.product||'').trim(),
     qty:Number(o.qty)||1,
     unitPrice:Number(o.unitPrice)||0,
     total:Number(o.total)||0,
     payment:String(o.payment||'Cash').trim(),
-    status:String(o.status||'Paid').trim()
+    status:String(o.status||'Paid').trim(),
+    creditUsed:Math.max(0,Number(o.creditUsed)||0),
+    cashPaid:Math.max(0,Number(o.cashPaid)||Math.max(0,(Number(o.total)||0)-(Number(o.creditUsed)||0)))
   })).filter(o=>o.parentName&&o.product);
   return out;
 }
+function buildBackupPayload(){
+  return {
+    version:2,
+    exportedAt:new Date().toISOString(),
+    db:DB,
+    alerts:ALERTS,
+    outbox:Array.isArray(OUTBOX)?OUTBOX:[]
+  };
+}
+function applyBackupPayload(parsed,sourceLabel='Backup'){
+  const incoming=parsed.db&&typeof parsed.db==='object'?parsed.db:parsed;
+  DB=normalizeImportedDB(incoming);
+  normalizeCustomerWalletState();
+  ALERTS=Array.isArray(parsed.alerts)?parsed.alerts:[];
+  OUTBOX=Array.isArray(parsed.outbox)?parsed.outbox:[];
+  saveLocal();
+  saveAlerts();
+  saveOutbox();
+  setSyncStatus(navigator.onLine?(OUTBOX.length?'syncing':'ok'):'error');
+  if(navigator.onLine&&OUTBOX.length)flushOutbox();
+  refreshVisibleScreen();
+  evaluateOperationalAlerts();
+  renderLab();
+  prepCustomerForm('c');
+  prepCustomerForm('nc');
+  toast(`\u2705 ${sourceLabel} imported successfully`,'ok');
+}
 function downloadBackup(){
-  const payload={version:1,exportedAt:new Date().toISOString(),db:DB,alerts:ALERTS};
+  const payload=buildBackupPayload();
   downloadBlob(`cathdel-backup-${today()}.json`,JSON.stringify(payload,null,2),'application/json');
   toast('\u2705 Full backup downloaded','ok');
 }
@@ -1259,21 +1623,184 @@ function importBackupFile(evt){
   reader.onload=()=>{
     try{
       const parsed=JSON.parse(String(reader.result||'{}'));
-      const incoming=parsed.db&&typeof parsed.db==='object'?parsed.db:parsed;
-      DB=normalizeImportedDB(incoming);
-      ALERTS=Array.isArray(parsed.alerts)?parsed.alerts:[];
-      saveLocal();
-      saveAlerts();
-      refreshVisibleScreen();
-      evaluateOperationalAlerts();
-      renderLab();
-      toast('\u2705 Backup imported successfully','ok');
+      applyBackupPayload(parsed,'Backup');
     }catch(e){
       toast('Invalid backup file','er');
     }
   };
   reader.readAsText(file);
   evt.target.value='';
+}
+function runPreHandoverCheck(){
+  const lines=[];
+  const warns=[];
+  const errs=[];
+  const qrBag={};
+  DB.customers.forEach(c=>{
+    const qr=String(c.qrId||'').trim();
+    if(!qr){
+      errs.push(`Missing QR: ${customerDisplayName(c)} (${c.id})`);
+      return;
+    }
+    qrBag[qr]=(qrBag[qr]||0)+1;
+  });
+  Object.entries(qrBag).forEach(([qr,count])=>{
+    if(count>1)errs.push(`Duplicate QR "${qr}" appears ${count} times`);
+  });
+  const childWithoutGrade=DB.customers.filter(c=>normalizeProfileType(c.profileType)!=='adult'&&!formatGradeInput(c.grade));
+  if(childWithoutGrade.length){
+    warns.push(`${childWithoutGrade.length} child account(s) without grade number`);
+  }
+  const noPhone=DB.customers.filter(c=>!String(c.phone||'').trim()).length;
+  if(noPhone)warns.push(`${noPhone} customer(s) without phone number`);
+  const noWallet=DB.customers.filter(c=>!walletForCustomer(c,false)).length;
+  if(noWallet)errs.push(`${noWallet} customer(s) missing wallet linkage`);
+  const pendingSync=(OUTBOX||[]).length;
+  if(pendingSync)warns.push(`${pendingSync} unsynced change(s) in outbox`);
+  const wallets=DB.wallets||[];
+  const emptyWallets=wallets.filter(w=>!Array.isArray(w.members)||!w.members.length).length;
+  if(emptyWallets)warns.push(`${emptyWallets} wallet(s) have no linked members`);
+
+  lines.push('Cathdel Creamy Pre-Handover Check');
+  lines.push(`Date: ${new Date().toISOString()}`);
+  lines.push(`Customers: ${DB.customers.length}`);
+  lines.push(`Orders: ${DB.orders.length}`);
+  lines.push(`Wallets: ${wallets.length}`);
+  lines.push(`Outbox pending: ${pendingSync}`);
+  lines.push(`Google Client ID configured: ${DB.settings.googleClientId?'YES':'NO'}`);
+  lines.push('');
+  lines.push(`Errors: ${errs.length}`);
+  errs.forEach(x=>lines.push(`- ${x}`));
+  lines.push('');
+  lines.push(`Warnings: ${warns.length}`);
+  warns.forEach(x=>lines.push(`- ${x}`));
+  lines.push('');
+  lines.push(errs.length?'Status: NOT READY':'Status: READY FOR HANDOVER');
+
+  const report=lines.join('\n');
+  downloadBlob(`cathdel-handover-check-${today()}.txt`,report,'text/plain;charset=utf-8');
+  alert(report);
+  toast(errs.length?'Fix handover issues before delivery':'Handover check passed','ok');
+}
+function linkGoogleAccount(){
+  const current=String(DB.settings.googleClientId||'').trim();
+  const entered=prompt('Enter your Google OAuth Client ID (Web client):',current||'');
+  if(entered===null)return;
+  DB.settings.googleClientId=String(entered||'').trim();
+  saveLocal();
+  pushSetting('googleClientId',DB.settings.googleClientId);
+  toast(DB.settings.googleClientId?'✅ Google client ID saved':'Client ID cleared','ok');
+}
+function ensureGoogleClientId(interactive=true){
+  const id=String(DB.settings.googleClientId||'').trim();
+  if(id)return id;
+  if(!interactive)return '';
+  linkGoogleAccount();
+  return String(DB.settings.googleClientId||'').trim();
+}
+function requestGoogleDriveToken(interactive=true){
+  return new Promise((resolve,reject)=>{
+    const clientId=ensureGoogleClientId(interactive);
+    if(!clientId){
+      reject(new Error('Google Client ID is required'));
+      return;
+    }
+    if(!(window.google&&window.google.accounts&&window.google.accounts.oauth2)){
+      reject(new Error('Google Identity script not loaded'));
+      return;
+    }
+    googleTokenClient=window.google.accounts.oauth2.initTokenClient({
+      client_id:clientId,
+      scope:GOOGLE_TOKEN_SCOPE,
+      callback:(resp)=>{
+        if(resp&&resp.access_token){
+          googleAccessToken=resp.access_token;
+          resolve(resp.access_token);
+        }else{
+          reject(new Error('No access token returned'));
+        }
+      }
+    });
+    googleTokenClient.requestAccessToken({prompt:interactive?'consent':''});
+  });
+}
+async function driveApi(path,opts={}){
+  const token=opts.token||googleAccessToken||await requestGoogleDriveToken(opts.interactive!==false);
+  const headers={Authorization:'Bearer '+token,...(opts.headers||{})};
+  const res=await fetch('https://www.googleapis.com/drive/v3'+path,{method:opts.method||'GET',headers,body:opts.body||null});
+  if(!res.ok){
+    const text=await res.text();
+    throw new Error(`Drive API ${res.status}: ${text.slice(0,180)}`);
+  }
+  return opts.parse==='text'?res.text():res.json();
+}
+async function findCloudBackupFile(token){
+  const q=encodeURIComponent(`name='${CLOUD_BACKUP_FILE}' and 'appDataFolder' in parents and trashed=false`);
+  const data=await driveApi(`/files?q=${q}&spaces=appDataFolder&fields=files(id,name,modifiedTime,size)`,{token});
+  return Array.isArray(data.files)&&data.files.length?data.files[0]:null;
+}
+async function backupToGoogleAccount(){
+  try{
+    const token=await requestGoogleDriveToken(true);
+    const existing=await findCloudBackupFile(token);
+    const payload=JSON.stringify(buildBackupPayload(),null,2);
+    const boundary='cathdel_'+Date.now();
+    const meta=JSON.stringify({name:CLOUD_BACKUP_FILE,mimeType:'application/json',parents:['appDataFolder']});
+    const body=[
+      `--${boundary}`,
+      'Content-Type: application/json; charset=UTF-8',
+      '',
+      meta,
+      `--${boundary}`,
+      'Content-Type: application/json; charset=UTF-8',
+      '',
+      payload,
+      `--${boundary}--`
+    ].join('\r\n');
+    const url=existing
+      ? `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`
+      : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+    const res=await fetch(url,{
+      method:existing?'PATCH':'POST',
+      headers:{
+        Authorization:'Bearer '+token,
+        'Content-Type':`multipart/related; boundary=${boundary}`
+      },
+      body
+    });
+    if(!res.ok)throw new Error(await res.text());
+    toast('✅ Backup saved to Google account','ok');
+  }catch(err){
+    toast('Google backup failed','er');
+    console.error(err);
+  }
+}
+async function restoreFromGoogleAccount(interactive=true){
+  try{
+    const token=await requestGoogleDriveToken(interactive);
+    const existing=await findCloudBackupFile(token);
+    if(!existing){
+      toast('No Google backup file found','er');
+      return;
+    }
+    const text=await driveApi(`/files/${existing.id}?alt=media`,{token,parse:'text'});
+    const parsed=JSON.parse(String(text||'{}'));
+    applyBackupPayload(parsed,'Google backup');
+  }catch(err){
+    toast('Google restore failed','er');
+    console.error(err);
+  }
+}
+function maybePromptCloudRestore(){
+  if(DB.settings.cloudRestorePrompted)return;
+  DB.settings.cloudRestorePrompted=true;
+  saveLocal();
+  pushSetting('cloudRestorePrompted','true');
+  const hasLocalData=DB.orders.length>0||DB.customers.length>3;
+  if(hasLocalData)return;
+  if(confirm('No local sales data found. Restore once from Google account now?')){
+    restoreFromGoogleAccount(true);
+  }
 }
 function undoLastSale(){
   if(!DB.orders.length){
@@ -1298,26 +1825,32 @@ function undoLastSale(){
 function renderCusts(){
   const q=(document.getElementById('custSearch')?.value||'').toLowerCase();
   const co=orderCounts();
-  const fx=DB.customers.filter(c=>c.parentName.toLowerCase().includes(q)||c.childName.toLowerCase().includes(q));
+  const fx=DB.customers.filter(c=>{
+    const blob=[c.parentName,c.childName,c.displayName,c.phone,c.grade,c.profileType,c.accountId].join(' ').toLowerCase();
+    return blob.includes(q);
+  });
   const el=document.getElementById('custList');
   if(!fx.length){el.innerHTML='<div class="empty"><div class="ei">&#128101;</div><h3>No customers found</h3></div>';return;}
   const threshold=Number(DB.settings.threshold)||10;
   el.innerHTML=fx.map(c=>{
-    const n=co[c.parentName]||0,done=n>=threshold;
+    const n=getCustomerOrderCount(c,co),done=n>=threshold;
+    const wallet=walletForCustomer(c,true);
+    const walletName=wallet?wallet.label:'Wallet';
     const last=customerLastOrder(c);
     const idle=last?daysSince(last.date):999;
     const action=done?'Reward message':(idle>=ALERT_SCAN_WINDOW_DAYS?'Win-back promo':(n>=Math.max(1,threshold-2)?'Push to reward':'General follow-up'));
     return `<div class="card" style="margin-bottom:10px;padding:15px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div style="font-weight:700;font-size:14px">${escHtml(c.parentName)}</div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:2px">${escHtml(c.childName)} &#8226; ${escHtml(c.grade)}</div>
+          <div style="font-weight:700;font-size:14px">${escHtml(customerDisplayName(c))}</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px">${escHtml(customerSubtitle(c))}</div>
           <div style="font-size:11px;color:var(--text-3)">${escHtml(c.phone||'No number')}</div>
-          <div style="font-size:11px;color:var(--teal);font-weight:700">Credit: R${Math.max(0,Number(c.credit||0))}</div>
+          <div style="font-size:11px;color:var(--teal);font-weight:700">${escHtml(walletName)}: R${customerBalance(c)}</div>
           <div style="font-size:10px;color:var(--text-3);margin-top:6px">Next action: ${escHtml(action)}</div>
         </div>
         <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
           <span class="badge ${done?'gold':''}">${done?'&#127881; Reward!':n+' orders'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="topUpWalletByCustomerId('${c.id}')">Top Up Wallet</button>
           <button class="btn btn-teal btn-sm" onclick="showCustomer360ById('${c.id}')">&#129504; 360 View</button>
           <button class="btn btn-ghost btn-sm" onclick="showQRCodeById('${c.id}')">&#128247; QR Code</button>
           <button class="btn btn-ghost btn-sm" onclick="showLoyaltyCardById('${c.id}')">&#127903; Loyalty Card</button>
@@ -1327,23 +1860,26 @@ function renderCusts(){
     </div>`;
   }).join('');
 }
-function toggleAddCust(){const el=document.getElementById('addCustCard');el.style.display=el.style.display==='none'?'block':'none';}
+function toggleAddCust(){
+  const el=document.getElementById('addCustCard');
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  if(open){
+    resetCustomerForm('c');
+    prepCustomerForm('c');
+  }
+}
 function saveNewCust(){
-  const pn=document.getElementById('c-pname').value.trim();
-  if(!pn){toast('Parent name required','er');return;}
-  const cust={id:'P-'+String(DB.customers.length+1).padStart(3,'0'),
-    qrId:'CC-P-'+String(DB.customers.length+1).padStart(3,'0')+'-'+Date.now(),
-    parentName:pn,childName:document.getElementById('c-cname').value.trim(),
-    grade:document.getElementById('c-grade').value.trim(),phone:document.getElementById('c-phone').value.trim()};
-  DB.customers.push(cust);saveLocal();pushCustomer(cust);
-  ['c-pname','c-cname','c-grade','c-phone'].forEach(id=>document.getElementById(id).value='');
+  const cust=createCustomerFromForm('c');
+  if(!cust)return;
+  resetCustomerForm('c');
   toggleAddCust();renderCusts();toast('\u2705 Customer saved!','ok');
   setTimeout(()=>showQRCode(cust),400);
 }
 
 //  QR CODE GENERATOR 
-function showQRCode(cust){
-  document.getElementById('qrPopupName').textContent=cust.parentName+' \u2022 '+cust.childName;
+function showQRCode(cust,isBlank){
+  document.getElementById('qrPopupName').textContent=isBlank?'Blank Activation QR':(customerDisplayName(cust)+' \u2022 '+customerSubtitle(cust));
   const container=document.getElementById('qrCodeDisplay');container.innerHTML='';
   if(typeof QRCode==='undefined'){
     container.innerHTML='<div class=\"empty\" style=\"padding:12px\"><p>QR generator unavailable offline.</p><p style=\"font-size:11px\">ID: '+cust.qrId+'</p></div>';
@@ -1397,6 +1933,7 @@ function nextBestActionForCustomer(cust,count,inactiveDays){
 function showCustomer360ById(id){
   const cust=findCustomerById(id);
   if(!cust){toast('Customer not found','er');return;}
+  const wallet=walletForCustomer(cust,true);
   const orders=customerOrders(cust).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   const count=orders.length;
   const total=orders.reduce((s,o)=>s+(Number(o.total)||0),0);
@@ -1414,8 +1951,8 @@ function showCustomer360ById(id){
   document.getElementById('customer360Content').innerHTML=`
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
       <div>
-        <div style="font-family:'Baloo 2','Segoe UI',Tahoma,sans-serif;font-size:22px;font-weight:800;color:var(--teal)">${escHtml(cust.parentName)}</div>
-        <div style="font-size:12px;color:var(--text-3)">${escHtml(cust.childName)} &#8226; ${escHtml(cust.grade)}</div>
+        <div style="font-family:'Baloo 2','Segoe UI',Tahoma,sans-serif;font-size:22px;font-weight:800;color:var(--teal)">${escHtml(customerDisplayName(cust))}</div>
+        <div style="font-size:12px;color:var(--text-3)">${escHtml(customerSubtitle(cust))}</div>
       </div>
       <span class="badge">${count} orders</span>
     </div>
@@ -1425,6 +1962,7 @@ function showCustomer360ById(id){
       <div class="mini-kpi"><div class="k">${inactiveDays===999?'Never':inactiveDays+'d'}</div><div class="l">Last Activity</div></div>
       <div class="mini-kpi"><div class="k">${escHtml(fav?fav.name:'-')}</div><div class="l">Favorite Product</div></div>
     </div>
+    <div style="font-size:11px;color:var(--teal);font-weight:700;margin:2px 0 10px 0">${escHtml(wallet?.label||'Wallet')}: R${Math.max(0,Number(wallet?.balance)||0)} <button class="btn btn-ghost btn-sm" onclick="topUpWalletByCustomerId('${cust.id}')">Top Up</button></div>
     <div class="card" style="margin:0 0 8px 0;padding:12px;border-radius:12px">
       <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px">Next Best Action</div>
       <div style="font-weight:700;color:var(--text);margin-top:2px">${escHtml(action.title)}</div>
@@ -1452,12 +1990,12 @@ function getRecipients(){
   }
   return DB.customers.filter(c=>{
     if(!c.phone)return false;
-    const n=co[c.parentName]||0;
+    const n=getCustomerOrderCount(c,co);
     if(filter==='all')return true;
     if(filter==='reward')return n>=thresh;
     if(filter==='close')return n>=Math.max(1,thresh-2)&&n<thresh;
     if(filter==='inactive'){
-      const lastOrder=DB.orders.filter(o=>o.parentName===c.parentName).sort((a,b)=>b.date.localeCompare(a.date))[0];
+      const lastOrder=customerOrders(c).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
       return !lastOrder||lastOrder.date<weekAgoStr;
     }
     return true;
@@ -1477,7 +2015,7 @@ function updateBroadcastPreview(){
   document.getElementById('bcastPreview').textContent=msg||'Your message will appear here...';
   const label=document.querySelector('.recipient-label');
   if(label){
-    const sample=recipients.slice(0,3).map(c=>c.parentName).join(', ');
+    const sample=recipients.slice(0,3).map(c=>customerDisplayName(c)).join(', ');
     label.textContent=recipients.length?`Selected: ${sample}${recipients.length>3?' ...':''}`:'No recipients selected';
   }
 }
@@ -1527,7 +2065,7 @@ function renderReport(){
   const card=dayOrders.filter(o=>o.payment==='Card').reduce((s,o)=>s+o.total,0);
   const eft=dayOrders.filter(o=>o.payment==='EFT').reduce((s,o)=>s+o.total,0);
   const units=dayOrders.reduce((s,o)=>s+o.qty,0);
-  const uniqueCust=new Set(dayOrders.map(o=>o.parentName)).size;
+  const uniqueCust=new Set(dayOrders.map(o=>String(o.customerId||('name:'+String(o.parentName||'').trim().toLowerCase())))).size;
   const byProduct={};
   dayOrders.forEach(o=>{if(!byProduct[o.product])byProduct[o.product]={qty:0,total:0};byProduct[o.product].qty+=o.qty;byProduct[o.product].total+=o.total;});
   el.innerHTML=`<div class="card">
@@ -1555,7 +2093,7 @@ function renderReport(){
     </div>
     <div class="report-section">
       <h4>&#129534; All Orders</h4>
-      ${dayOrders.map(o=>`<div class="cashup-row"><span class="label">${o.parentName}<br><span style="font-size:11px;color:var(--text-3)">${o.product} &#215; ${o.qty} &#8226; ${o.payment}</span></span><span class="amount">R${o.total}</span></div>`).join('')}
+      ${dayOrders.map(o=>`<div class="cashup-row"><span class="label">${escHtml(orderCustomerLabel(o))}<br><span style="font-size:11px;color:var(--text-3)">${escHtml(o.product)} &#215; ${o.qty} &#8226; ${escHtml(o.payment)}</span></span><span class="amount">R${o.total}</span></div>`).join('')}
     </div>
     <button class="btn btn-ghost" onclick="window.print()" style="margin-top:8px">&#128424;&#65039; Print / Save as PDF</button>
   </div>`;
@@ -1608,7 +2146,19 @@ function saveSettings(){
 }
 
 //  HELPERS 
-function orderCounts(){const c={};DB.orders.forEach(o=>c[o.parentName]=(c[o.parentName]||0)+1);return c;}
+function orderCounts(){
+  const c={};
+  DB.orders.forEach(o=>{
+    if(o.customerId){
+      const idKey='id:'+String(o.customerId).trim();
+      c[idKey]=(c[idKey]||0)+1;
+      return;
+    }
+    const nameKey='name:'+String(o.parentName||'').trim().toLowerCase();
+    c[nameKey]=(c[nameKey]||0)+1;
+  });
+  return c;
+}
 function today(){return new Date().toISOString().split('T')[0];}
 function show(id){const e=document.getElementById(id);if(e)e.style.display='block';}
 function hide(id){const e=document.getElementById(id);if(e)e.style.display='none';}
@@ -1749,9 +2299,9 @@ function evaluateOperationalAlerts(){
   if(DB.settings.notifyRewards==='YES'){
     const co=orderCounts();
     DB.customers.forEach(c=>{
-      const n=co[c.parentName]||0;
+      const n=getCustomerOrderCount(c,co);
       if(n>=threshold){
-        addAppAlert('reward',`Reward ready: ${c.parentName}`,`${c.childName||'Customer'} is at ${n}/${threshold}. Send reward message.`,`reward:${c.id}:${day}`);
+        addAppAlert('reward',`Reward ready: ${customerDisplayName(c)}`,`${c.childName||'Customer'} is at ${n}/${threshold}. Send reward message.`,`reward:${c.id}:${day}`);
       }
     });
   }
@@ -1762,7 +2312,7 @@ function evaluateOperationalAlerts(){
       return (last?daysSince(last.date):999)>=ALERT_SCAN_WINDOW_DAYS;
     });
     if(inactive.length){
-      const names=inactive.slice(0,3).map(c=>c.parentName).join(', ');
+      const names=inactive.slice(0,3).map(c=>customerDisplayName(c)).join(', ');
       addAppAlert('inactive','Win-back targets ready',`${inactive.length} inactive customers (${names}${inactive.length>3?', ...':''}).`,`inactive:${day}`);
     }
   }
@@ -1903,7 +2453,11 @@ Object.assign(window,{
   canAccessTab,go,applyRolePermissions,saveSettings,startBroadcast,
   handleScan,showQRCode,registerNewFromScan,saveNewCust,pickCust,
   renderLoy,showLoyaltyCard,renderDash,queueOperation,flushOutbox,pushAction,
-  assistantAnswer,pushCustomer,pushOrder,pushReward,setSyncStatus
+  assistantAnswer,pushCustomer,pushOrder,pushReward,setSyncStatus,
+  topUpWalletByCustomerId,runPreHandoverCheck,
+  linkGoogleAccount,backupToGoogleAccount,restoreFromGoogleAccount,
+  setCustomerTypeUI,toggleWalletMode,prepCustomerForm,
+  customerDisplayName,customerSubtitle
 });
 
 //  INIT 
@@ -1921,3 +2475,10 @@ refreshInstallButton();
 applyRoleBadge();
 startOnboard();
 primeLocalBoot();
+resetCustomerForm('c');
+resetCustomerForm('nc');
+prepCustomerForm('c');
+prepCustomerForm('nc');
+setTimeout(maybePromptCloudRestore,1800);
+
+

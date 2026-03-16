@@ -11,9 +11,24 @@
 
       if(DB.customers.length){
         const c=DB.customers[0];
-        c.credit=Math.max(0,Number(c.credit||0))+200;
+        const wallet=(DB.wallets||[]).find(w=>String(w.id)===String(c.accountId));
+        if(wallet){
+          wallet.balance=Math.max(0,Number(wallet.balance||0))+200;
+          if(typeof syncWalletMembers==='function')syncWalletMembers(wallet.id);
+        }else{
+          c.credit=Math.max(0,Number(c.credit||0))+200;
+        }
         for(let i=0;i<120;i++){
-          DB.orders.push({id:'T-'+Date.now()+'-'+i,date:today(),parentName:c.parentName,product:(DB.products[0]||{name:'Test'}).name,qty:1,unitPrice:1,total:1,payment:'Cash',status:'Paid'});
+          DB.orders.push({
+            id:'T-'+Date.now()+'-'+i,
+            date:today(),
+            parentName:c.displayName||c.childName||c.parentName||'Stress',
+            customerName:c.displayName||c.childName||c.parentName||'Stress',
+            customerId:c.id,
+            accountId:c.accountId||'',
+            product:(DB.products[0]||{name:'Test'}).name,
+            qty:1,unitPrice:1,total:1,payment:'Cash',status:'Paid'
+          });
         }
       }
 

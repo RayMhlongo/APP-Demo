@@ -24,6 +24,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 @font-face{
   font-family:"Poppins";
@@ -546,7 +547,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
     <div id="lowStockAlert"></div>
     <div class="action-row">
       <button class="big-btn teal" onclick="startScan()"><span class="bi">&#128247;</span>Scan QR</button>
-      <button class="big-btn cream" onclick="startFlow('select')"><span class="bi">&#128100;</span>Select Student</button>
+      <button class="big-btn cream" onclick="startFlow('select')"><span class="bi">&#128100;</span>Select Customer</button>
       <button class="big-btn mint" onclick="generateReverseQR()"><span class="bi">&#128438;</span>Generate Blank QR</button>
     </div>
     <div class="stitle">&#128221; Recent Sales</div>
@@ -567,10 +568,14 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
       <div class="card">
       <div class="new-cust-banner"><h3>&#128075; New Customer!</h3><p>Fill in their details to register.</p></div>
       <div class="card-title">&#10133; Register New Customer</div>
-      <div class="fg"><label>Parent / Guardian Name (Optional)</label><input id="nc-pname" placeholder="e.g. Sipho Mom"></div>
-      <div class="fg"><label>Child Name</label><input id="nc-cname" placeholder="e.g. Sipho"></div>
-      <div class="fg"><label>Grade / Class</label><input id="nc-grade" placeholder="e.g. Grade 4"></div>
+      <div class="fg"><label>Customer Type</label><select id="nc-type" onchange="setCustomerTypeUI('nc')"><option value="child">Child</option><option value="adult">Adult</option></select></div>
+      <div class="fg" id="nc-parent-wrap"><label>Parent / Guardian Name</label><input id="nc-pname" placeholder="e.g. Sipho Mom"></div>
+      <div class="fg"><label id="nc-name-label">Child Name</label><input id="nc-cname" placeholder="e.g. Sipho"></div>
+      <div class="fg" id="nc-grade-wrap"><label>Grade Number</label><input id="nc-grade" type="number" min="0" step="1" placeholder="e.g. 4"></div>
       <div class="fg"><label>WhatsApp Number</label><input id="nc-phone" placeholder="+27 72 123 4567"></div>
+      <div class="fg"><label>Wallet Mode</label><select id="nc-wallet-mode" onchange="toggleWalletMode('nc')"><option value="new">Create New Wallet</option><option value="existing">Use Existing Wallet</option></select></div>
+      <div class="fg" id="nc-wallet-name-wrap"><label>Wallet Name</label><input id="nc-wallet-name" placeholder="e.g. Mhlongo Family Wallet"></div>
+      <div class="fg" id="nc-wallet-existing-wrap" style="display:none"><label>Select Existing Wallet</label><select id="nc-wallet-existing"></select></div>
       <div class="fg"><label>Credit Top-Up (R)</label><input id="nc-credit" type="number" min="0" step="1" value="0"></div>
       <input type="hidden" id="nc-qrid">
       <div style="display:flex;gap:8px;margin-top:4px">
@@ -581,8 +586,8 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   </div>
   <div id="v-select" style="display:none">
     <div class="card">
-      <div class="card-title">&#128100; Select Student</div>
-      <div class="search-wrap"><input id="stuSearch" placeholder="Search by name or child" oninput="renderStudentList()"></div>
+      <div class="card-title">&#128100; Select Customer</div>
+      <div class="search-wrap"><input id="stuSearch" placeholder="Search by name, grade, phone" oninput="renderStudentList()"></div>
       <div class="slist" id="stuList"></div>
       <div style="margin-top:12px"><button class="btn btn-ghost" onclick="cancelFlow()">&#8592; Back</button></div>
     </div>
@@ -721,6 +726,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
     <div class="card">
       <div class="card-title">&#128295; Power Tools</div>
       <div class="cc-tools">
+        <button class="btn btn-ghost btn-sm" onclick="runPreHandoverCheck()">Pre-Handover Check</button>
         <button class="btn btn-ghost btn-sm" onclick="undoLastSale()">Undo Last Sale</button>
         <button class="btn btn-ghost btn-sm" onclick="exportOrdersCsv()">Export Orders CSV</button>
         <button class="btn btn-ghost btn-sm" onclick="exportCustomersCsv()">Export Customers CSV</button>
@@ -730,7 +736,12 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
         <button class="btn btn-teal btn-sm" onclick="document.getElementById('labImportInput').click()">Import Backup JSON</button>
         <input id="labImportInput" type="file" accept="application/json,.json" style="display:none" onchange="importBackupFile(event)">
       </div>
-      <p style="font-size:11px;color:var(--text-3);margin-top:8px">Backup includes settings, customers, orders, products, rewards and notifications.</p>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="linkGoogleAccount()">Link Google Account</button>
+        <button class="btn btn-ghost btn-sm" onclick="backupToGoogleAccount()">Backup to Google</button>
+        <button class="btn btn-ghost btn-sm" onclick="restoreFromGoogleAccount(true)">Restore from Google</button>
+      </div>
+      <p style="font-size:11px;color:var(--text-3);margin-top:8px">Backup includes settings, customers, wallets, orders, products, rewards, alerts and pending sync queue.</p>
     </div>
 
     <div class="card">
@@ -749,10 +760,14 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   <div id="addCustCard" style="display:none">
     <div class="card">
       <div class="card-title">&#10133; New Customer</div>
-      <div class="fg"><label>Parent / Guardian Name (Optional)</label><input id="c-pname" placeholder="e.g. Sipho Mom"></div>
-      <div class="fg"><label>Child Name</label><input id="c-cname" placeholder="e.g. Sipho"></div>
-      <div class="fg"><label>Grade / Class</label><input id="c-grade" placeholder="e.g. Grade 4"></div>
+      <div class="fg"><label>Customer Type</label><select id="c-type" onchange="setCustomerTypeUI('c')"><option value="child">Child</option><option value="adult">Adult</option></select></div>
+      <div class="fg" id="c-parent-wrap"><label>Parent / Guardian Name</label><input id="c-pname" placeholder="e.g. Sipho Mom"></div>
+      <div class="fg"><label id="c-name-label">Child Name</label><input id="c-cname" placeholder="e.g. Sipho"></div>
+      <div class="fg" id="c-grade-wrap"><label>Grade Number</label><input id="c-grade" type="number" min="0" step="1" placeholder="e.g. 4"></div>
       <div class="fg"><label>WhatsApp Number</label><input id="c-phone" placeholder="+27 72 123 4567"></div>
+      <div class="fg"><label>Wallet Mode</label><select id="c-wallet-mode" onchange="toggleWalletMode('c')"><option value="new">Create New Wallet</option><option value="existing">Use Existing Wallet</option></select></div>
+      <div class="fg" id="c-wallet-name-wrap"><label>Wallet Name</label><input id="c-wallet-name" placeholder="e.g. Mhlongo Family Wallet"></div>
+      <div class="fg" id="c-wallet-existing-wrap" style="display:none"><label>Select Existing Wallet</label><select id="c-wallet-existing"></select></div>
       <div class="fg"><label>Credit Top-Up (R)</label><input id="c-credit" type="number" min="0" step="1" value="0"></div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost" style="flex:1" onclick="toggleAddCust()">Cancel</button>
