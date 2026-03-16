@@ -1,11 +1,18 @@
 import {
+  averageDailySales,
+  averageWeeklySales,
   buildInsights,
   getEntryStatusByDate,
+  missedDayPatterns,
+  monthOverMonth,
   mostCommonNoSaleReason,
   noSaleCount,
+  reasonDistribution,
   recentActivity,
+  sellingDaysThisMonth,
   totalSales,
   todaySales,
+  weekOverWeek,
   weekSales
 } from '../../services/analytics.js';
 import { escapeHtml, formatMoney } from '../../utils/format.js';
@@ -16,6 +23,10 @@ const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 export function initDashboardFeature({ store, modal, navigateToSalesDate }) {
   const kpiGrid = document.getElementById('kpiGrid');
   const weeklyBars = document.getElementById('weeklyBars');
+  const weeklySummary = document.getElementById('weeklySummary');
+  const deltaGrid = document.getElementById('deltaGrid');
+  const deltaSummary = document.getElementById('deltaSummary');
+  const reasonBars = document.getElementById('reasonBars');
   const insightList = document.getElementById('insightList');
   const activityList = document.getElementById('activityList');
   const heatmap = document.getElementById('heatmapCalendar');
@@ -80,14 +91,19 @@ export function initDashboardFeature({ store, modal, navigateToSalesDate }) {
     const misses = noSaleCount(state);
     const loyalty = state.customers.length;
     const common = mostCommonNoSaleReason(state);
+    const daily = averageDailySales(state);
+    const weekly = averageWeeklySales(state);
+    const soldThisMonth = sellingDaysThisMonth(state);
 
     const cards = [
       { label: 'Today Sales', value: formatMoney(today.total, currency), sub: `${today.entries.length} transaction(s)` },
       { label: 'Week Sales', value: formatMoney(week.total, currency), sub: `${week.entries.length} transaction(s)` },
       { label: 'Total Sales', value: formatMoney(total, currency), sub: `${state.entries.filter((entry) => entry.type === 'sale').length} sales logs` },
       { label: 'Missed Days', value: String(misses), sub: common ? `Top reason: ${common.reason.replace(/_/g, ' ')}` : 'No reasons logged' },
-      { label: 'Loyalty Customers', value: String(loyalty), sub: `${state.wallets.length} wallets` },
-      { label: 'Saved Locally', value: state.lastSavedAt.slice(0, 16).replace('T', ' '), sub: 'Persistence active' }
+      { label: 'Avg Daily Sales', value: formatMoney(daily.amount, currency), sub: `${daily.days || 0} selling day(s)` },
+      { label: 'Avg Weekly Sales', value: formatMoney(weekly.amount, currency), sub: `${weekly.weeks || 0} week window` },
+      { label: 'Selling Days', value: String(soldThisMonth), sub: 'Current month' },
+      { label: 'Loyalty Customers', value: String(loyalty), sub: `${state.wallets.length} wallets` }
     ];
 
     kpiGrid.innerHTML = cards.map((card) => `
@@ -106,28 +122,84 @@ export function initDashboardFeature({ store, modal, navigateToSalesDate }) {
     const start = new Date(today);
     start.setDate(today.getDate() - day);
     for (let i = 0; i < 7; i += 1) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      weekDates.push(formatLocalISO(d));
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      weekDates.push(formatLocalISO(date));
     }
 
-    const max = Math.max(1, ...weekDates.map((date) => {
-      const sales = state.entries.filter((entry) => entry.type === 'sale' && entry.date === date);
-      return sales.reduce((acc, entry) => acc + Number(entry.amount || 0), 0);
-    }));
+    const totals = weekDates.map((date) => state.entries
+      .filter((entry) => entry.type === 'sale' && entry.date === date)
+      .reduce((acc, entry) => acc + Number(entry.amount || 0), 0));
+    const max = Math.max(1, ...totals);
 
-    weeklyBars.innerHTML = weekDates.map((date, idx) => {
-      const sales = state.entries.filter((entry) => entry.type === 'sale' && entry.date === date);
+    weeklyBars.innerHTML = weekDates.map((date, index) => {
       const noSale = state.entries.find((entry) => entry.type === 'no_sale' && entry.date === date);
-      const amount = sales.reduce((acc, entry) => acc + Number(entry.amount || 0), 0);
+      const amount = totals[index];
       const height = Math.max(8, Math.round((amount / max) * 100));
       return `
         <div class="bar-col">
-          <div class="bar ${noSale && !sales.length ? 'no-sale' : ''}" style="height:${height}px"></div>
-          <div class="bar-label">${WEEKDAYS[idx]}</div>
+          <div class="bar ${noSale && amount <= 0 ? 'no-sale' : ''}" style="height:${height}px"></div>
+          <div class="bar-label">${WEEKDAYS[index]}</div>
         </div>
       `;
     }).join('');
+
+    const week = weekSales(state);
+    weeklySummary.textContent = week.total > 0
+      ? `This week: ${week.entries.length} sales, total ${formatMoney(week.total, state.settings.currency || 'ZAR')}.`
+      : 'No sales recorded this week yet.';
+  }
+
+  function renderDeltaCards(state) {
+    const currency = state.settings.currency || 'ZAR';
+    const wow = weekOverWeek(state);
+    const mom = monthOverMonth(state);
+
+    function renderDeltaCard(title, current, previous, changePct) {
+      const pctLabel = changePct === null ? 'n/a' : `${changePct >= 0 ? '+' : '-'}${Math.abs(changePct).toFixed(1)}%`;
+      const trendClass = changePct === null ? 'flat' : (changePct >= 0 ? 'up' : 'down');
+      return `
+        <div class="delta-card ${trendClass}">
+          <p class="delta-title">${escapeHtml(title)}</p>
+          <p class="delta-value">${escapeHtml(formatMoney(current, currency))}</p>
+          <p class="delta-meta">Prev: ${escapeHtml(formatMoney(previous, currency))}</p>
+          <p class="delta-change">${escapeHtml(pctLabel)}</p>
+        </div>
+      `;
+    }
+
+    deltaGrid.innerHTML = [
+      renderDeltaCard('Week-over-week', wow.current, wow.previous, wow.changePct),
+      renderDeltaCard('Month-over-month', mom.current, mom.previous, mom.changePct)
+    ].join('');
+
+    if (wow.changePct === null && mom.changePct === null) {
+      deltaSummary.textContent = 'Comparisons need enough historical data.';
+      return;
+    }
+
+    const trendNotes = [];
+    if (wow.changePct !== null) trendNotes.push(`Week-over-week is ${wow.changePct >= 0 ? 'up' : 'down'} ${Math.abs(wow.changePct).toFixed(1)}%.`);
+    if (mom.changePct !== null) trendNotes.push(`Month-over-month is ${mom.changePct >= 0 ? 'up' : 'down'} ${Math.abs(mom.changePct).toFixed(1)}%.`);
+    deltaSummary.textContent = trendNotes.join(' ');
+  }
+
+  function renderReasonBars(state) {
+    const reasons = Object.entries(reasonDistribution(state)).sort((a, b) => b[1] - a[1]);
+    const max = Math.max(1, ...(reasons.map(([, count]) => count)));
+
+    if (!reasons.length) {
+      reasonBars.innerHTML = '<div class="reason-empty">No no-sale reasons logged yet.</div>';
+      return;
+    }
+
+    reasonBars.innerHTML = reasons.map(([reason, count]) => `
+      <div class="reason-row">
+        <span class="reason-label">${escapeHtml(reason.replace(/_/g, ' '))}</span>
+        <div class="reason-track"><div class="reason-fill" style="width:${Math.max(6, Math.round((count / max) * 100))}%"></div></div>
+        <strong class="reason-count">${count}</strong>
+      </div>
+    `).join('');
   }
 
   function renderHeatmap(state) {
@@ -168,6 +240,8 @@ export function initDashboardFeature({ store, modal, navigateToSalesDate }) {
   function render(state) {
     renderKpis(state);
     renderWeeklyBars(state);
+    renderDeltaCards(state);
+    renderReasonBars(state);
     renderHeatmap(state);
     renderInsights(state);
     renderActivity(state);

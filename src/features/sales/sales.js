@@ -1,8 +1,9 @@
 import { todayISO, formatHumanDate } from '../../utils/date.js';
 import { escapeHtml, formatMoney, toNumber } from '../../utils/format.js';
 import { uid } from '../../utils/id.js';
+import { validateNoSaleInput, validateSaleInput } from '../../services/validation.js';
 
-export function initSalesFeature({ store, showToast, modal, renderAll }) {
+export function initSalesFeature({ store, showToast, modal, renderAll, telemetry }) {
   const saleForm = document.getElementById('saleForm');
   const noSaleForm = document.getElementById('noSaleForm');
   const saleDate = document.getElementById('saleDate');
@@ -24,8 +25,8 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
     const productSelect = document.getElementById('saleProduct');
     const currency = state.settings.currency || 'ZAR';
 
-    customerSelect.innerHTML = ['<option value="">Walk-in / no customer</option>', ...state.customers.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`)].join('');
-    productSelect.innerHTML = state.products.map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (${formatMoney(p.price, currency)})</option>`).join('');
+    customerSelect.innerHTML = ['<option value="">Walk-in / no customer</option>', ...state.customers.map((customer) => `<option value="${escapeHtml(customer.id)}">${escapeHtml(customer.name)}</option>`)].join('');
+    productSelect.innerHTML = state.products.map((product) => `<option value="${escapeHtml(product.id)}">${escapeHtml(product.name)} (${formatMoney(product.price, currency)})</option>`).join('');
   }
 
   function resetForms() {
@@ -98,47 +99,46 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
     event.preventDefault();
 
     const state = store.getState();
-    const date = String(document.getElementById('saleDate').value || '').slice(0, 10);
-    const amount = toNumber(document.getElementById('saleAmount').value);
-    const customerId = document.getElementById('saleCustomer').value;
-    const productId = document.getElementById('saleProduct').value;
-    const qty = Math.max(1, Math.round(toNumber(document.getElementById('saleQty').value, 1)));
-    const payment = document.getElementById('salePayment').value;
-    const notes = String(document.getElementById('saleNotes').value || '').trim();
+    const payload = {
+      date: String(document.getElementById('saleDate').value || '').slice(0, 10),
+      amount: toNumber(document.getElementById('saleAmount').value),
+      customerId: document.getElementById('saleCustomer').value,
+      productId: document.getElementById('saleProduct').value,
+      qty: Math.max(1, Math.round(toNumber(document.getElementById('saleQty').value, 1))),
+      payment: document.getElementById('salePayment').value,
+      notes: String(document.getElementById('saleNotes').value || '').trim()
+    };
 
-    if (!date || Number.isNaN(new Date(`${date}T00:00:00`).getTime())) {
-      showToast('Choose a valid sale date.');
+    const validation = validateSaleInput(payload);
+    if (!validation.ok) {
+      showToast(validation.errors[0]);
       return;
     }
-    if (amount <= 0) {
-      showToast('Sale amount must be greater than zero.');
-      return;
-    }
 
-    const existingNoSale = getNoSaleForDate(state, date, editingSaleId);
+    const existingNoSale = getNoSaleForDate(state, payload.date, editingSaleId);
     if (existingNoSale) {
-      const replace = await modal.confirm('Date Already Marked as No Sale', `This day is marked as "did not sell". Replace it with sale data for ${formatHumanDate(date)}?`);
+      const replace = await modal.confirm('Date Already Marked as No Sale', `This day is marked as "did not sell". Replace it with sale data for ${formatHumanDate(payload.date)}?`);
       if (!replace) return;
     }
 
     const originalSale = editingSaleId ? state.entries.find((entry) => entry.id === editingSaleId) : null;
-    const customer = state.customers.find((item) => item.id === customerId);
+    const customer = state.customers.find((item) => item.id === payload.customerId);
     const wallet = customer ? state.wallets.find((item) => item.id === customer.walletId) : null;
-    const walletUsed = wallet ? Math.min(Number(wallet.balance || 0), amount) : 0;
-    const cashPaid = Math.max(0, amount - walletUsed);
+    const walletUsed = wallet ? Math.min(Number(wallet.balance || 0), payload.amount) : 0;
+    const cashPaid = Math.max(0, payload.amount - walletUsed);
 
     const candidate = {
       id: editingSaleId || uid('sale'),
       type: 'sale',
-      date,
-      amount,
+      date: payload.date,
+      amount: payload.amount,
       reasonKey: '',
       reasonText: '',
-      notes,
-      payment,
-      qty,
-      customerId,
-      productId,
+      notes: payload.notes,
+      payment: payload.payment,
+      qty: payload.qty,
+      customerId: payload.customerId,
+      productId: payload.productId,
       walletUsed,
       cashPaid,
       createdAt: originalSale?.createdAt || new Date().toISOString(),
@@ -151,22 +151,22 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
     }
 
     store.update((draft) => {
-      if (existingNoSale) {
-        draft.entries = draft.entries.filter((entry) => entry.id !== existingNoSale.id);
-      }
-
+      if (existingNoSale) draft.entries = draft.entries.filter((entry) => entry.id !== existingNoSale.id);
       if (originalSale) rollbackSaleImpact(draft, originalSale);
-
-      const idx = draft.entries.findIndex((entry) => entry.id === candidate.id);
-      if (idx >= 0) draft.entries[idx] = candidate;
+      const index = draft.entries.findIndex((entry) => entry.id === candidate.id);
+      if (index >= 0) draft.entries[index] = candidate;
       else draft.entries.unshift(candidate);
-
       applySaleImpact(draft, candidate);
     }, {
-      activityMessage: editingSaleId ? `Sale updated for ${date}` : `Sale recorded for ${date}`,
+      activityMessage: editingSaleId ? `Sale updated for ${payload.date}` : `Sale recorded for ${payload.date}`,
       activityType: 'sale'
     });
 
+    telemetry.track(editingSaleId ? 'sale_updated' : 'sale_logged', {
+      amount: payload.amount,
+      payment: payload.payment,
+      customer: payload.customerId || 'walk_in'
+    });
     resetForms();
     renderAll();
     showToast('Sale saved.');
@@ -179,31 +179,27 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
   noSaleForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const state = store.getState();
-    const date = String(document.getElementById('noSaleDate').value || '').slice(0, 10);
-    const reasonKey = noSaleReason.value;
-    const customReason = String(document.getElementById('noSaleCustomReason').value || '').trim();
-    const notes = String(document.getElementById('noSaleNotes').value || '').trim();
 
-    if (!date || Number.isNaN(new Date(`${date}T00:00:00`).getTime())) {
-      showToast('Choose a valid date.');
-      return;
-    }
-    if (!reasonKey) {
-      showToast('Select a reason for not selling.');
-      return;
-    }
-    if (reasonKey === 'other' && !customReason) {
-      showToast('Enter a custom reason.');
+    const payload = {
+      date: String(document.getElementById('noSaleDate').value || '').slice(0, 10),
+      reasonKey: noSaleReason.value,
+      reasonText: String(document.getElementById('noSaleCustomReason').value || '').trim(),
+      notes: String(document.getElementById('noSaleNotes').value || '').trim()
+    };
+
+    const validation = validateNoSaleInput(payload);
+    if (!validation.ok) {
+      showToast(validation.errors[0]);
       return;
     }
 
-    const sameDaySales = getSalesForDate(state, date, editingNoSaleId);
+    const sameDaySales = getSalesForDate(state, payload.date, editingNoSaleId);
     if (sameDaySales.length) {
       showToast('This date has sales. Remove sales first or use a different date.');
       return;
     }
 
-    const existingNoSale = getNoSaleForDate(state, date, editingNoSaleId);
+    const existingNoSale = getNoSaleForDate(state, payload.date, editingNoSaleId);
     if (existingNoSale && !editingNoSaleId) {
       showToast('This date already has a no-sale record. Edit it instead.');
       return;
@@ -212,11 +208,11 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
     const entry = {
       id: editingNoSaleId || uid('nosale'),
       type: 'no_sale',
-      date,
+      date: payload.date,
       amount: 0,
-      reasonKey,
-      reasonText: reasonKey === 'other' ? customReason : '',
-      notes,
+      reasonKey: payload.reasonKey,
+      reasonText: payload.reasonKey === 'other' ? payload.reasonText : '',
+      notes: payload.notes,
       payment: '',
       qty: 1,
       customerId: '',
@@ -228,14 +224,17 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
     };
 
     store.update((draft) => {
-      const idx = draft.entries.findIndex((item) => item.id === entry.id);
-      if (idx >= 0) draft.entries[idx] = entry;
+      const index = draft.entries.findIndex((item) => item.id === entry.id);
+      if (index >= 0) draft.entries[index] = entry;
       else draft.entries.unshift(entry);
     }, {
-      activityMessage: editingNoSaleId ? `No-sale day updated (${date})` : `No-sale day logged (${date})`,
+      activityMessage: editingNoSaleId ? `No-sale day updated (${payload.date})` : `No-sale day logged (${payload.date})`,
       activityType: 'nosale'
     });
 
+    telemetry.track(editingNoSaleId ? 'nosale_updated' : 'nosale_logged', {
+      reason: payload.reasonKey
+    });
     resetForms();
     renderAll();
     showToast('No-sale day saved.');
@@ -255,6 +254,7 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
       activityType: 'delete'
     });
 
+    telemetry.track('entry_deleted');
     renderAll();
     showToast('Entry deleted.');
   }
@@ -314,13 +314,13 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
       const kind = entry.type === 'sale' ? 'Sale' : 'No Sale';
       const reason = entry.type === 'no_sale'
         ? (entry.reasonKey === 'other' ? entry.reasonText : entry.reasonKey.replace(/_/g, ' '))
-        : `${escapeHtml(entry.payment)} • Qty ${Number(entry.qty || 1)}`;
+        : `${escapeHtml(entry.payment)} - Qty ${Number(entry.qty || 1)}`;
       const amount = entry.type === 'sale' ? formatMoney(entry.amount, currency) : '-';
       return `
         <div class="log-item">
           <div class="log-item-head">
             <div>
-              <strong>${kind} • ${formatHumanDate(entry.date)}</strong>
+              <strong>${kind} - ${formatHumanDate(entry.date)}</strong>
               <div class="customer-meta">${escapeHtml(reason || 'No detail')}</div>
               ${entry.notes ? `<div class="customer-meta">${escapeHtml(entry.notes)}</div>` : ''}
             </div>
@@ -341,7 +341,7 @@ export function initSalesFeature({ store, showToast, modal, renderAll }) {
     render(state) {
       fillSelectors(state);
       renderLogs(state);
-      document.getElementById('customReasonWrap').hidden = noSaleReason.value !== 'other';
+      customReasonWrap.hidden = noSaleReason.value !== 'other';
     },
     resetForms
   };

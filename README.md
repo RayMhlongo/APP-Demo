@@ -1,55 +1,72 @@
-# CreamTrack Vendor (APP-Demo Refactor)
+# CreamTrack Vendor
 
-CreamTrack Vendor is a mobile-first PWA for small vendors to track daily sales, missed trading days, loyalty customers, and business insights in one installable app.
+CreamTrack Vendor is a mobile-first business management PWA for small vendors (ice-cream style businesses) to track sales, missed trading days, customer loyalty, and practical business insights.
 
-## Why This Project Exists
+## Product Overview
 
-Small businesses often run on paper notes and memory, which makes year-end review and day-to-day decisions hard. This app provides a lightweight, practical system for:
+This project is designed as a realistic startup MVP:
 
-- Logging sales quickly
-- Recording days with no sales and why
-- Managing loyalty/customer wallets and QR identities
-- Monitoring business health from a single dashboard
-- Backing up and restoring data when switching devices
+- Premium-feeling mobile UX
+- Installable PWA with offline-first behavior
+- Rule-based intelligence that explains business performance
+- Exportable reports for operational and month-end review
+- Optional observability and AI integrations with graceful fallback
 
-## Core Features
+## Recruiter-Impressive Features Added
 
-- Owner dashboard with:
-  - Today, week, and total sales summaries
-  - Missed-day totals and top no-sale reason
-  - Heatmap calendar (sold vs no-sale vs no entry)
-  - Smart rule-based insights
-  - Recent activity timeline
-- Sales operations:
-  - Record sale entries
-  - Mark a day as no-sale with reason
-  - Edit/delete logs with confirmation
-  - Duplicate sale guardrails
-- Loyalty and wallet management:
-  - Child and adult profiles
-  - Grade number input for children
-  - Shared wallet support for siblings/families
-  - QR generation and scanning
-- Business assistant:
-  - Responds to sales/trend/loyalty questions
-  - Sending/loading/error/empty states
-  - Fallback responses when complex queries fail
-- Settings and trust features:
-  - Business/currency/operating-day configuration
-  - Google connection status and account linking
-  - Google Drive backup and restore (appData)
-  - JSON backup export/import
-  - CSV exports
+1. Smart insights engine:
+- strongest/weakest sales day
+- top no-sale reason
+- sales streaks
+- selling days this month
+- week-over-week and month-over-month changes
+- average daily and average weekly sales
+
+2. Strong data architecture:
+- centralized storage/sanitization layer
+- explicit model definitions (`src/services/models.js`)
+- centralized validation (`src/services/validation.js`)
+- predictable store updates (`src/state/store.js`)
+
+3. Report Studio:
+- date-range report generation
+- filtered sales CSV
+- filtered no-sale CSV
+- summary CSV
+- print-friendly report view
+
+4. Offline-first reliability:
+- clear online/offline indicator
+- local-write awareness while offline
+- honest messaging (no fake cloud sync states)
+- PWA shell caching and resilient loading
+
+5. Product observability:
+- optional PostHog tracking
+- optional Sentry error monitoring
+- safe no-config fallback (app still works fully)
+
+## Core Product Capabilities
+
+- Daily sale logging with edit/delete protection
+- No-sale day logging with reason and notes
+- Loyalty/customer management (child and adult profiles)
+- Shared wallet support for siblings/family spending
+- QR generation and scanning
+- Assistant that always works locally and can optionally use external AI
+- Google account linking + Drive backup/restore
 
 ## Tech Stack
 
 - HTML, CSS, Vanilla JavaScript (ES modules)
-- Local persistence: `localStorage` via storage service layer
+- Local persistence: `localStorage`
 - PWA: `manifest.json` + `service-worker.js`
-- Capacitor wrapper for Android packaging
-- Optional Google integrations:
-  - Google Identity Services (OAuth token flow)
-  - Google Drive API (`drive.appdata`) for backup/restore
+- Capacitor Android wrapper
+- Optional integrations:
+  - Google Identity Services + Drive appData backup
+  - PostHog (analytics/event tracking)
+  - Sentry (error monitoring)
+  - Groq/OpenRouter (assistant intelligence)
 
 ## Project Structure
 
@@ -64,37 +81,83 @@ Small businesses often run on paper notes and memory, which makes year-end revie
     /sales
     /settings
   /services
+    analytics.js
+    assistant-engine.js
+    auth.js
+    models.js
+    reports.js
+    storage.js
+    sync.js
+    telemetry.js
+    validation.js
   /state
   /styles
   /utils
 ```
 
-## Local Setup
+## Running Locally
 
-1. Clone the repo.
+1. Clone repo.
 2. Open `APP-Demo`.
-3. Serve the app with any static server from project root:
+3. Start any static server from project root:
    - `python -m http.server 8080`
    - or `npx serve .`
-4. Open `http://localhost:8080`.
+4. Visit `http://localhost:8080`.
 
-## PWA Install Notes
+## PWA Notes
 
-- Use HTTPS in production (required for best install + camera behavior).
+- Use HTTPS in production for best install/camera behavior.
 - Install prompt appears when browser supports `beforeinstallprompt`.
-- Offline banner appears automatically when connectivity is lost.
+- Core flows remain usable offline (local saves continue).
 
-## Google Auth + Backup Configuration
+## Optional Integration Setup
 
-Google features require valid OAuth configuration.
+### Google Auth + Backup
 
-1. Create OAuth Client ID (Web application) in Google Cloud Console.
-2. Add authorized JavaScript origins for your app URLs (for example your production domain).
-3. Enable Google Drive API in the same project.
-4. In app settings, paste the Client ID into **Google OAuth Client ID**.
-5. Connect account, then use **Backup to Google** / **Restore from Google**.
+1. Create OAuth Client ID (Web app) in Google Cloud.
+2. Add authorized JavaScript origins for deployed app URLs.
+3. Enable Google Drive API.
+4. In app Settings:
+   - set **Google OAuth Client ID**
+   - connect account
+   - use backup/restore buttons
 
-If configuration is missing or invalid, the UI will show explicit errors (no false-success alerts).
+### PostHog (Free Tier)
+
+1. Create PostHog project.
+2. Copy project key.
+3. In app Settings > Observability:
+   - set **PostHog Project Key**
+   - optionally set host (default: `https://app.posthog.com`)
+4. Save settings.
+
+Tracked events include:
+- sale/no-sale logs
+- report generation/exports
+- assistant usage/failures
+- Google connect/backup/restore attempts
+- QR scan lifecycle
+- install prompt events
+
+### Sentry (Free Tier)
+
+1. Create Sentry project (Browser/JavaScript).
+2. Copy DSN.
+3. In app Settings > Observability:
+   - set **Sentry DSN**
+4. Save settings.
+
+### Assistant AI (Optional: Groq or OpenRouter)
+
+Without API key, assistant uses reliable local insights only.
+
+To enable AI:
+1. Pick provider in Settings > Assistant Intelligence.
+2. Add API key.
+3. Optionally override model/base URL.
+4. Save settings.
+
+If remote AI fails, app automatically falls back to local assistant responses.
 
 ## Android APK (Capacitor)
 
@@ -104,18 +167,22 @@ From project root:
 2. `npm run cap:sync`
 3. `npm run apk:debug`
 
-Debug APK output is typically under:
+Expected output path:
 
 - `android/app/build/outputs/apk/debug/`
 
-## Screenshots
+## Deployment
 
-- `[Placeholder] Dashboard`
-- `[Placeholder] Sales + No-Sale Logging`
-- `[Placeholder] Loyalty + QR`
-- `[Placeholder] Assistant`
-- `[Placeholder] Settings + Backup`
+The project is static-host friendly and works with GitHub Pages, Cloudflare Pages, Netlify, or Vercel static hosting.
 
-## Portfolio Value Statement
+## Screenshots Placeholders
 
-This project demonstrates turning a demo into a production-style small-business product by combining practical UX, mobile-first PWA behavior, modular frontend architecture, offline resilience, and honest integration flows for authentication and backup.
+- Dashboard (KPIs + trends + insights + heatmap)
+- Sales + no-sale logging
+- Loyalty + wallets + QR
+- Assistant (local + optional AI)
+- Settings + backups + observability
+
+## Why This Matters
+
+CreamTrack Vendor demonstrates practical startup engineering: clean architecture, mobile-first UX, offline resilience, analytics-ready product instrumentation, and real owner-facing value without expensive infrastructure.

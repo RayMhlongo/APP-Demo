@@ -74,6 +74,24 @@
             <p>Sales and missed-day pattern</p>
           </div>
           <div id="weeklyBars" class="mini-bars" aria-label="Weekly sales chart"></div>
+          <p class="summary-note" id="weeklySummary">No weekly data yet.</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h3>What Changed</h3>
+            <p>Week-over-week and month-over-month movement</p>
+          </div>
+          <div class="delta-grid" id="deltaGrid"></div>
+          <p class="summary-note" id="deltaSummary">No trend data yet.</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h3>No-Sale Reasons</h3>
+            <p>Where selling gaps are coming from</p>
+          </div>
+          <div class="reason-bars" id="reasonBars"></div>
         </article>
 
         <article class="card">
@@ -106,6 +124,33 @@
             <h3>Recent Activity</h3>
           </div>
           <ul class="timeline" id="activityList"></ul>
+        </article>
+
+        <article class="card report-card">
+          <div class="card-head">
+            <h3>Report Studio</h3>
+            <p>Export filtered business summaries</p>
+          </div>
+          <form id="reportForm" class="form-grid report-form" novalidate>
+            <label>From
+              <input type="date" id="reportFromDate" />
+            </label>
+            <label>To
+              <input type="date" id="reportToDate" />
+            </label>
+            <button class="btn btn-primary full" type="submit">Generate Report</button>
+          </form>
+          <div id="reportSummary" class="report-summary">
+            Generate a report to see filtered totals, trends, and missed-day reasons.
+          </div>
+          <div class="button-row">
+            <button class="btn" id="reportExportSalesBtn" type="button">Export Sales CSV</button>
+            <button class="btn" id="reportExportNoSaleBtn" type="button">Export No-Sale CSV</button>
+            <button class="btn" id="reportExportSummaryBtn" type="button">Export Summary CSV</button>
+          </div>
+          <div class="button-row">
+            <button class="btn" id="reportPrintBtn" type="button">Print Summary</button>
+          </div>
         </article>
       </section>
 
@@ -325,6 +370,52 @@
             <div class="full button-row">
               <button class="btn btn-primary" type="submit">Save Settings</button>
             </div>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h3>Assistant Intelligence</h3>
+            <p>Optional low-cost AI with local fallback</p>
+          </div>
+          <form id="assistantProviderForm" class="form-grid" novalidate>
+            <label>Provider
+              <select id="settingAssistantProvider">
+                <option value="none">Local only (free)</option>
+                <option value="groq">Groq</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+            </label>
+            <label>Model
+              <input type="text" id="settingAssistantModel" placeholder="llama-3.1-8b-instant" />
+            </label>
+            <label class="full">API Key
+              <input type="password" id="settingAssistantApiKey" placeholder="Optional API key" />
+            </label>
+            <label class="full">Base URL override
+              <input type="text" id="settingAssistantBaseUrl" placeholder="Optional custom endpoint" />
+            </label>
+            <button class="btn btn-primary full" type="submit" form="settingsForm">Save Settings</button>
+          </form>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h3>Observability</h3>
+            <p>Optional PostHog + Sentry free-tier setup</p>
+          </div>
+          <form id="observabilityForm" class="form-grid" novalidate>
+            <label>PostHog Project Key
+              <input type="text" id="settingPosthogKey" placeholder="phc_xxxxx" />
+            </label>
+            <label>PostHog Host
+              <input type="text" id="settingPosthogHost" placeholder="https://app.posthog.com" />
+            </label>
+            <label class="full">Sentry DSN
+              <input type="text" id="settingSentryDsn" placeholder="https://xxxx@o000.ingest.sentry.io/000" />
+            </label>
+            <div class="full settings-meta" id="telemetryStatus">Telemetry: Not configured</div>
+            <button class="btn btn-primary full" type="submit" form="settingsForm">Save Settings</button>
           </form>
         </article>
 

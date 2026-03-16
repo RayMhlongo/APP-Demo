@@ -1,14 +1,20 @@
-﻿import { todayISO } from '../utils/date.js';
+import { todayISO } from '../utils/date.js';
 import { uid } from '../utils/id.js';
+import { NO_SALE_REASON_OPTIONS } from './models.js';
 
 const APP_KEY = 'creamtrack.vendor.v2';
+
+function sanitizeOperatingDays(days) {
+  const list = Array.isArray(days) ? days.map((day) => Number(day)).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6) : [];
+  return [...new Set(list)].sort((a, b) => a - b);
+}
 
 function defaultState() {
   const walletA = { id: 'wallet-001', label: 'Mhlongo Family', balance: 0, memberIds: ['cust-001', 'cust-002'] };
   const walletB = { id: 'wallet-002', label: 'Walk-in Adults', balance: 0, memberIds: ['cust-003'] };
 
   return {
-    version: 2,
+    version: 3,
     lastSavedAt: new Date().toISOString(),
     settings: {
       businessName: 'CreamTrack Vendor',
@@ -21,6 +27,17 @@ function defaultState() {
         connected: false,
         email: '',
         connectedAt: ''
+      },
+      observability: {
+        posthogKey: '',
+        posthogHost: 'https://app.posthog.com',
+        sentryDsn: ''
+      },
+      assistant: {
+        provider: 'none',
+        apiKey: '',
+        model: '',
+        baseUrl: ''
       }
     },
     products: [
@@ -41,94 +58,178 @@ function defaultState() {
   };
 }
 
-function sanitize(state) {
-  const base = defaultState();
-  const merged = {
-    ...base,
-    ...state,
-    settings: {
-      ...base.settings,
-      ...(state.settings || {}),
-      googleConnection: {
-        ...base.settings.googleConnection,
-        ...((state.settings && state.settings.googleConnection) || {})
-      }
+function sanitizeSettings(rawSettings, baseSettings) {
+  const settings = {
+    ...baseSettings,
+    ...(rawSettings || {}),
+    googleConnection: {
+      ...baseSettings.googleConnection,
+      ...((rawSettings && rawSettings.googleConnection) || {})
     },
-    products: Array.isArray(state.products) ? state.products : base.products,
-    customers: Array.isArray(state.customers) ? state.customers : base.customers,
-    wallets: Array.isArray(state.wallets) ? state.wallets : base.wallets,
-    entries: Array.isArray(state.entries) ? state.entries : [],
-    activity: Array.isArray(state.activity) ? state.activity : base.activity
+    observability: {
+      ...baseSettings.observability,
+      ...((rawSettings && rawSettings.observability) || {})
+    },
+    assistant: {
+      ...baseSettings.assistant,
+      ...((rawSettings && rawSettings.assistant) || {})
+    }
   };
 
-  const validCustomers = merged.customers
-    .map((c, idx) => ({
-      id: String(c.id || `cust-${String(idx + 1).padStart(3, '0')}`),
-      type: String(c.type || 'child') === 'adult' ? 'adult' : 'child',
-      name: String(c.name || '').trim(),
-      guardianName: String(c.guardianName || '').trim(),
-      grade: String(c.grade || '').replace(/\D/g, ''),
-      phone: String(c.phone || '').trim(),
-      qrId: String(c.qrId || `CT-CUST-${String(idx + 1).padStart(3, '0')}`),
-      walletId: String(c.walletId || '')
+  settings.businessName = String(settings.businessName || '').trim() || baseSettings.businessName;
+  settings.valueProp = String(settings.valueProp || '').trim() || baseSettings.valueProp;
+  settings.currency = String(settings.currency || 'ZAR').trim() || 'ZAR';
+  settings.operatingDays = sanitizeOperatingDays(settings.operatingDays);
+  if (!settings.operatingDays.length) settings.operatingDays = [...baseSettings.operatingDays];
+  settings.loyaltyThreshold = Math.max(1, Number(settings.loyaltyThreshold || baseSettings.loyaltyThreshold || 10));
+  settings.googleClientId = String(settings.googleClientId || '').trim();
+  settings.googleConnection = {
+    connected: Boolean(settings.googleConnection.connected),
+    email: String(settings.googleConnection.email || '').trim(),
+    connectedAt: String(settings.googleConnection.connectedAt || '').trim()
+  };
+  settings.observability = {
+    posthogKey: String(settings.observability.posthogKey || '').trim(),
+    posthogHost: String(settings.observability.posthogHost || baseSettings.observability.posthogHost || 'https://app.posthog.com').trim(),
+    sentryDsn: String(settings.observability.sentryDsn || '').trim()
+  };
+  settings.assistant = {
+    provider: ['none', 'groq', 'openrouter'].includes(String(settings.assistant.provider || '').toLowerCase())
+      ? String(settings.assistant.provider || 'none').toLowerCase()
+      : 'none',
+    apiKey: String(settings.assistant.apiKey || '').trim(),
+    model: String(settings.assistant.model || '').trim(),
+    baseUrl: String(settings.assistant.baseUrl || '').trim()
+  };
+
+  return settings;
+}
+
+function sanitizeProducts(products, baseProducts) {
+  const list = Array.isArray(products) ? products : baseProducts;
+  return list
+    .map((product, index) => ({
+      id: String(product.id || `prd-${String(index + 1).padStart(3, '0')}`),
+      name: String(product.name || '').trim(),
+      price: Math.max(0, Number(product.price || 0)),
+      stock: Math.max(0, Number(product.stock || 0))
     }))
-    .filter((c) => c.name);
+    .filter((product) => product.name);
+}
 
-  const walletsById = new Map(
-    merged.wallets.map((w, idx) => [
-      String(w.id || `wallet-${String(idx + 1).padStart(3, '0')}`),
-      {
-        id: String(w.id || `wallet-${String(idx + 1).padStart(3, '0')}`),
-        label: String(w.label || 'Family Wallet').trim() || 'Family Wallet',
-        balance: Math.max(0, Number(w.balance || 0)),
-        memberIds: Array.isArray(w.memberIds) ? w.memberIds.map((x) => String(x)) : []
-      }
-    ])
-  );
+function sanitizeCustomers(customers) {
+  const list = Array.isArray(customers) ? customers : [];
+  return list
+    .map((customer, index) => ({
+      id: String(customer.id || `cust-${String(index + 1).padStart(3, '0')}`),
+      type: String(customer.type || '').toLowerCase() === 'adult' ? 'adult' : 'child',
+      name: String(customer.name || '').trim(),
+      guardianName: String(customer.guardianName || '').trim(),
+      grade: String(customer.grade || '').replace(/\D/g, ''),
+      phone: String(customer.phone || '').trim(),
+      qrId: String(customer.qrId || `CT-CUST-${String(index + 1).padStart(3, '0')}`).trim(),
+      walletId: String(customer.walletId || '').trim()
+    }))
+    .filter((customer) => customer.name);
+}
 
-  validCustomers.forEach((cust) => {
-    if (!cust.walletId || !walletsById.has(cust.walletId)) {
-      const wid = `wallet-${cust.id}`;
-      if (!walletsById.has(wid)) {
-        walletsById.set(wid, {
-          id: wid,
-          label: `${cust.guardianName || cust.name} Wallet`,
+function sanitizeWallets(wallets) {
+  const map = new Map();
+  (Array.isArray(wallets) ? wallets : []).forEach((wallet, index) => {
+    const id = String(wallet.id || `wallet-${String(index + 1).padStart(3, '0')}`).trim();
+    map.set(id, {
+      id,
+      label: String(wallet.label || 'Family Wallet').trim() || 'Family Wallet',
+      balance: Math.max(0, Number(wallet.balance || 0)),
+      memberIds: Array.isArray(wallet.memberIds) ? [...new Set(wallet.memberIds.map((member) => String(member || '').trim()).filter(Boolean))] : []
+    });
+  });
+  return map;
+}
+
+function sanitizeEntries(entries) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => {
+      const type = entry.type === 'no_sale' ? 'no_sale' : 'sale';
+      const reasonKey = String(entry.reasonKey || '').trim();
+      return {
+        id: String(entry.id || uid('entry')),
+        type,
+        date: String(entry.date || todayISO()).slice(0, 10),
+        amount: type === 'sale' ? Math.max(0, Number(entry.amount || 0)) : 0,
+        reasonKey: type === 'no_sale'
+          ? (NO_SALE_REASON_OPTIONS.includes(reasonKey) ? reasonKey : 'other')
+          : '',
+        reasonText: type === 'no_sale' ? String(entry.reasonText || '').trim() : '',
+        notes: String(entry.notes || '').trim(),
+        payment: type === 'sale' ? String(entry.payment || 'Cash').trim() : '',
+        qty: type === 'sale' ? Math.max(1, Number(entry.qty || 1)) : 1,
+        customerId: type === 'sale' ? String(entry.customerId || '').trim() : '',
+        productId: type === 'sale' ? String(entry.productId || '').trim() : '',
+        walletUsed: type === 'sale' ? Math.max(0, Number(entry.walletUsed || 0)) : 0,
+        cashPaid: type === 'sale' ? Math.max(0, Number(entry.cashPaid || 0)) : 0,
+        createdAt: String(entry.createdAt || new Date().toISOString()),
+        updatedAt: String(entry.updatedAt || new Date().toISOString())
+      };
+    })
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+
+function sanitizeActivity(activity, baseActivity) {
+  const list = Array.isArray(activity) ? activity : baseActivity;
+  return list
+    .map((item, index) => ({
+      id: String(item.id || `act-${String(index + 1).padStart(4, '0')}`),
+      type: String(item.type || 'info'),
+      message: String(item.message || '').trim(),
+      at: String(item.at || new Date().toISOString())
+    }))
+    .filter((item) => item.message)
+    .slice(0, 400);
+}
+
+function reconcileWalletMembers(customers, walletsById) {
+  customers.forEach((customer) => {
+    if (!customer.walletId || !walletsById.has(customer.walletId)) {
+      const fallbackId = `wallet-${customer.id}`;
+      if (!walletsById.has(fallbackId)) {
+        walletsById.set(fallbackId, {
+          id: fallbackId,
+          label: `${customer.guardianName || customer.name} Wallet`,
           balance: 0,
           memberIds: []
         });
       }
-      cust.walletId = wid;
+      customer.walletId = fallbackId;
     }
-    const wallet = walletsById.get(cust.walletId);
-    if (!wallet.memberIds.includes(cust.id)) wallet.memberIds.push(cust.id);
+    const wallet = walletsById.get(customer.walletId);
+    if (!wallet.memberIds.includes(customer.id)) wallet.memberIds.push(customer.id);
   });
 
-  const entries = merged.entries
-    .map((e) => ({
-      id: String(e.id || uid('entry')),
-      type: e.type === 'no_sale' ? 'no_sale' : 'sale',
-      date: String(e.date || todayISO()).slice(0, 10),
-      amount: Math.max(0, Number(e.amount || 0)),
-      reasonKey: String(e.reasonKey || ''),
-      reasonText: String(e.reasonText || ''),
-      notes: String(e.notes || ''),
-      payment: String(e.payment || 'Cash'),
-      qty: Math.max(1, Number(e.qty || 1)),
-      customerId: String(e.customerId || ''),
-      productId: String(e.productId || ''),
-      walletUsed: Math.max(0, Number(e.walletUsed || 0)),
-      cashPaid: Math.max(0, Number(e.cashPaid || 0)),
-      createdAt: String(e.createdAt || new Date().toISOString()),
-      updatedAt: String(e.updatedAt || new Date().toISOString())
-    }))
-    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  walletsById.forEach((wallet) => {
+    wallet.memberIds = wallet.memberIds.filter((memberId) => customers.some((customer) => customer.id === memberId));
+  });
+}
+
+function sanitize(state) {
+  const base = defaultState();
+  const settings = sanitizeSettings(state?.settings, base.settings);
+  const products = sanitizeProducts(state?.products, base.products);
+  const customers = sanitizeCustomers(state?.customers);
+  const walletsById = sanitizeWallets(state?.wallets);
+  reconcileWalletMembers(customers, walletsById);
+  const entries = sanitizeEntries(state?.entries);
+  const activity = sanitizeActivity(state?.activity, base.activity);
 
   return {
-    ...merged,
-    customers: validCustomers,
+    version: 3,
+    lastSavedAt: String(state?.lastSavedAt || new Date().toISOString()),
+    settings,
+    products,
+    customers,
     wallets: [...walletsById.values()],
     entries,
-    lastSavedAt: String(state.lastSavedAt || new Date().toISOString())
+    activity
   };
 }
 
@@ -136,8 +237,7 @@ export function loadState() {
   try {
     const raw = localStorage.getItem(APP_KEY);
     if (!raw) return defaultState();
-    const parsed = JSON.parse(raw);
-    return sanitize(parsed);
+    return sanitize(JSON.parse(raw));
   } catch {
     return defaultState();
   }
@@ -158,7 +258,7 @@ export function resetState() {
 
 export function exportBackup(state) {
   return {
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     app: 'CreamTrack Vendor',
     state: sanitize(state)

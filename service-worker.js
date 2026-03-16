@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'creamtrack-v18';
+const CACHE_VERSION = 'creamtrack-v19';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const OFFLINE_FALLBACK_URL = new URL('./index.html', self.location.href).toString();
@@ -25,14 +25,20 @@ const APP_SHELL = [
   './src/components/toast.js',
   './src/features/assistant/assistant.js',
   './src/features/dashboard/dashboard.js',
+  './src/features/dashboard/reports.js',
   './src/features/loyalty/loyalty.js',
   './src/features/qr/qr.js',
   './src/features/sales/sales.js',
   './src/features/settings/settings.js',
+  './src/services/assistant-engine.js',
   './src/services/analytics.js',
   './src/services/auth.js',
+  './src/services/models.js',
+  './src/services/reports.js',
   './src/services/storage.js',
   './src/services/sync.js',
+  './src/services/telemetry.js',
+  './src/services/validation.js',
   './src/state/store.js',
   './src/styles/app.css',
   './src/styles/tokens.css',
@@ -43,6 +49,8 @@ const APP_SHELL = [
 
 const THIRD_PARTY_ASSETS = [
   'https://accounts.google.com/gsi/client',
+  'https://cdn.jsdelivr.net/npm/posthog-js@1.228.0/dist/posthog.js',
+  'https://browser.sentry-cdn.com/8.33.0/bundle.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
 ];
@@ -149,7 +157,9 @@ self.addEventListener('fetch', (event) => {
 
   if (
     url.hostname.includes('cdnjs.cloudflare.com') ||
-    url.hostname.includes('accounts.google.com')
+    url.hostname.includes('accounts.google.com') ||
+    url.hostname.includes('cdn.jsdelivr.net') ||
+    url.hostname.includes('browser.sentry-cdn.com')
   ) {
     event.respondWith(cacheFirst(request, RUNTIME_CACHE));
     return;

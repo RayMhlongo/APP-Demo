@@ -1,7 +1,6 @@
-import { assistantReply } from '../../services/analytics.js';
 import { escapeHtml } from '../../utils/format.js';
 
-export function initAssistantFeature({ store, showToast }) {
+export function initAssistantFeature({ assistantEngine, showToast, telemetry }) {
   const stateEl = document.getElementById('assistantState');
   const chatEl = document.getElementById('assistantChat');
   const form = document.getElementById('assistantForm');
@@ -16,8 +15,8 @@ export function initAssistantFeature({ store, showToast }) {
     stateEl.dataset.mode = mode;
   }
 
-  function pushMessage(role, text) {
-    messages.push({ role, text, at: new Date().toISOString() });
+  function pushMessage(role, text, meta = '') {
+    messages.push({ role, text, meta, at: new Date().toISOString() });
     renderMessages();
   }
 
@@ -28,7 +27,12 @@ export function initAssistantFeature({ store, showToast }) {
     }
 
     chatEl.innerHTML = messages
-      .map((message) => `<div class="msg ${message.role === 'user' ? 'user' : 'assistant'}">${escapeHtml(message.text).replace(/\n/g, '<br>')}</div>`)
+      .map((message) => `
+        <div class="msg ${message.role === 'user' ? 'user' : 'assistant'}">
+          ${escapeHtml(message.text).replace(/\n/g, '<br>')}
+          ${message.meta ? `<div class="msg-meta">${escapeHtml(message.meta)}</div>` : ''}
+        </div>
+      `)
       .join('');
     chatEl.scrollTop = chatEl.scrollHeight;
   }
@@ -41,6 +45,7 @@ export function initAssistantFeature({ store, showToast }) {
     }
     if (sendBtn.disabled) return;
 
+    telemetry.track('assistant_query_sent', { length: q.length });
     pushMessage('user', q);
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending...';
@@ -48,18 +53,28 @@ export function initAssistantFeature({ store, showToast }) {
     setState('Assistant is thinking...', 'sending');
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      const response = assistantReply(q, store.getState());
-      if (!response || !String(response).trim()) {
+      const response = await assistantEngine.ask(q);
+      if (!response?.ok || !String(response.text || '').trim()) {
         throw new Error('Assistant returned an empty response.');
       }
-      pushMessage('assistant', response);
+
+      const sourceMeta = response.mode === 'local'
+        ? 'Source: Local insights'
+        : response.mode === 'local_fallback'
+          ? 'Source: Local fallback (AI unavailable)'
+          : `Source: ${String(response.mode).toUpperCase()}`;
+
+      pushMessage('assistant', response.text, sourceMeta);
+      if (response.note) showToast(response.note);
       setState('Response ready.', 'success');
+      telemetry.track('assistant_query_success', { mode: response.mode || 'unknown' });
     } catch (error) {
-      const fallback = 'I could not process that request. Ask about today sales, week summary, missed-day reasons, or strongest day.';
-      pushMessage('assistant', fallback);
+      const fallback = 'I could not process that request. Ask about today sales, week summary, no-sale reasons, or trends.';
+      pushMessage('assistant', fallback, 'Source: Local fallback');
       setState(`Assistant error: ${error.message || 'Unknown issue.'}`, 'error');
       showToast('Assistant had an issue. A fallback reply was shown.');
+      telemetry.track('assistant_query_failed');
+      telemetry.captureError(error, { area: 'assistant_feature' });
     } finally {
       sendBtn.disabled = false;
       sendBtn.textContent = 'Send';

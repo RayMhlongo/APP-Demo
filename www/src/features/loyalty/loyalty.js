@@ -1,12 +1,13 @@
 import { renderQrCode, canScanQr, createScanner } from '../qr/qr.js';
 import { normalizeGrade, normalizePhone, escapeHtml, formatMoney } from '../../utils/format.js';
 import { uid } from '../../utils/id.js';
+import { validateCustomerInput } from '../../services/validation.js';
 
 function randomQrId() {
   return `CT-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
 }
 
-export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
+export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemetry }) {
   const form = document.getElementById('customerForm');
   const submitBtn = form.querySelector('button[type="submit"]');
   const cancelEditBtn = document.getElementById('customerCancelEditBtn');
@@ -92,7 +93,7 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
         const rewardReady = visit >= threshold;
         const subtitle = customer.type === 'adult'
           ? 'Adult profile'
-          : `Grade ${escapeHtml(customer.grade || '-')}${customer.guardianName ? ` • Guardian: ${escapeHtml(customer.guardianName)}` : ''}`;
+          : `Grade ${escapeHtml(customer.grade || '-')}${customer.guardianName ? ` - Guardian: ${escapeHtml(customer.guardianName)}` : ''}`;
 
         return `
           <div class="customer-item">
@@ -100,9 +101,9 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
               <div>
                 <strong>${escapeHtml(customer.name)}</strong>
                 <div class="customer-meta">${subtitle}</div>
-                <div class="customer-meta">${escapeHtml(customer.phone || 'No phone')} • QR: ${escapeHtml(customer.qrId)}</div>
+                <div class="customer-meta">${escapeHtml(customer.phone || 'No phone')} - QR: ${escapeHtml(customer.qrId)}</div>
                 <div class="customer-meta">${escapeHtml(wallet?.label || 'Wallet')}: ${formatMoney(wallet?.balance || 0, currency)}</div>
-                <div class="customer-meta">Visits: ${visit}/${threshold}${rewardReady ? ' • Reward ready' : ''}</div>
+                <div class="customer-meta">Visits: ${visit}/${threshold}${rewardReady ? ' - Reward ready' : ''}</div>
               </div>
               <div>
                 <button class="chip" type="button" data-qr-id="${escapeHtml(customer.id)}">Show QR</button>
@@ -174,6 +175,7 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
       activityType: 'wallet'
     });
 
+    telemetry.track('wallet_topup', { amount });
     renderAll();
     showToast('Wallet topped up.');
   }
@@ -202,6 +204,7 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
       activityType: 'delete'
     });
 
+    telemetry.track('customer_deleted');
     if (editingCustomerId === customer.id) resetFormState();
     renderAll();
     showToast('Customer deleted.');
@@ -234,22 +237,20 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
     const walletMode = walletModeInput.value;
     const topup = Math.max(0, Number(walletTopupInput.value || 0));
 
-    if (!name) {
-      showToast(type === 'adult' ? 'Adult name is required.' : 'Child name is required.');
-      return;
-    }
-    if (type === 'child' && !grade) {
-      showToast('Grade number is required for child profiles.');
-      return;
-    }
-
     let selectedWalletId = '';
-    if (walletMode === 'existing') {
-      selectedWalletId = walletExistingInput.value;
-      if (!selectedWalletId) {
-        showToast('Select an existing wallet.');
-        return;
-      }
+    if (walletMode === 'existing') selectedWalletId = walletExistingInput.value;
+
+    const validation = validateCustomerInput({
+      type,
+      name,
+      grade,
+      walletMode,
+      walletId: selectedWalletId,
+      topup
+    });
+    if (!validation.ok) {
+      showToast(validation.errors[0]);
+      return;
     }
 
     const customer = upsertCustomer(state, {
@@ -287,8 +288,8 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
 
       customer.walletId = finalWalletId || oldWalletId;
 
-      const idx = draft.customers.findIndex((item) => item.id === customer.id);
-      if (idx >= 0) draft.customers[idx] = customer;
+      const index = draft.customers.findIndex((item) => item.id === customer.id);
+      if (index >= 0) draft.customers[index] = customer;
       else draft.customers.unshift(customer);
 
       if (oldWalletId && oldWalletId !== customer.walletId) {
@@ -308,6 +309,7 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
       activityType: 'customer'
     });
 
+    telemetry.track(existing ? 'customer_updated' : 'customer_added', { type });
     resetFormState();
     renderAll();
     showToast(existing ? 'Customer updated.' : 'Customer saved.');
@@ -335,14 +337,17 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
   }
 
   async function startScanner() {
+    telemetry.track('qr_scan_started');
     if (!canScanQr()) {
       showToast('Scanner unavailable. Use generated or saved QR IDs.');
+      telemetry.track('qr_scan_failed', { reason: 'unavailable' });
       return;
     }
 
     if (!scanner) scanner = createScanner('scanRegion');
     if (!scanner) {
       showToast('Scanner unavailable. QR library is not loaded.');
+      telemetry.track('qr_scan_failed', { reason: 'missing_library' });
       return;
     }
 
@@ -363,18 +368,22 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll }) {
             renderQr(decodedText, 'Unknown QR. Save customer to assign it.');
             showToast('QR scanned. Complete customer form to assign it.');
           }
+          telemetry.track('qr_scan_completed', { known_customer: Boolean(customer) });
         },
         () => {}
       );
-    } catch {
+    } catch (error) {
       showToast('Unable to start scanner. Camera permission may be blocked.');
       scanRegion.hidden = true;
+      telemetry.track('qr_scan_failed', { reason: 'camera_error' });
+      telemetry.captureError(error, { area: 'qr_scan' });
     }
   }
 
   document.getElementById('generateBlankQrBtn').addEventListener('click', () => {
     scannedQr = `CT-BLANK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
     renderQr(scannedQr, 'Blank QR generated');
+    telemetry.track('qr_generated_blank');
     showToast('Blank QR generated.');
   });
 

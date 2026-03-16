@@ -3,13 +3,18 @@ import { createNav } from './components/nav.js';
 import { createToast } from './components/toast.js';
 import { initAssistantFeature } from './features/assistant/assistant.js';
 import { initDashboardFeature } from './features/dashboard/dashboard.js';
+import { initReportsFeature } from './features/dashboard/reports.js';
 import { initLoyaltyFeature } from './features/loyalty/loyalty.js';
 import { initSalesFeature } from './features/sales/sales.js';
 import { initSettingsFeature } from './features/settings/settings.js';
+import { createAssistantEngine } from './services/assistant-engine.js';
 import { createAuthService } from './services/auth.js';
 import { createSyncService } from './services/sync.js';
+import { createTelemetryService } from './services/telemetry.js';
 import { createStore } from './state/store.js';
 import { todayISO } from './utils/date.js';
+
+const APP_VERSION = '1.9.0';
 
 function isStandaloneMode() {
   const mq = window.matchMedia ? window.matchMedia('(display-mode: standalone)').matches : false;
@@ -40,31 +45,48 @@ function bootstrap() {
   const screenRoot = document.getElementById('screenRoot');
   const navRoot = document.querySelector('.bottom-nav');
 
+  const telemetry = createTelemetryService({
+    getState: store.getState,
+    appVersion: APP_VERSION
+  });
   const authService = createAuthService({
     getState: store.getState,
     setState: store.setState
   });
+  const assistantEngine = createAssistantEngine({
+    getState: store.getState,
+    telemetry
+  });
 
   let deferredPrompt = null;
-  let syncStatus = navigator.onLine ? 'online' : 'offline';
+  let syncMeta = { status: navigator.onLine ? 'online' : 'offline', offlineWrites: 0 };
   let renderLock = false;
+  let lastSavedAt = store.getState().lastSavedAt;
 
-  const nav = createNav(navRoot, screenRoot, () => {
+  const nav = createNav(navRoot, screenRoot, (screen) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    telemetry.track('screen_view', { screen });
+    if (screen === 'assistant') telemetry.track('chatbot_opened');
   });
 
   function updateSyncUi(state) {
     const linked = state.settings.googleConnection?.connected;
-    let modeLabel = linked ? 'Google' : 'Local';
-    if (syncStatus === 'offline') modeLabel = 'Offline';
-    syncChip.textContent = `Sync: ${modeLabel}`;
-    syncChip.dataset.status = syncStatus;
-    offlineBanner.hidden = syncStatus !== 'offline';
+    const modeLabel = linked ? 'Google linked' : 'Local storage';
+    if (syncMeta.status === 'offline') {
+      const suffix = syncMeta.offlineWrites > 0 ? ` (${syncMeta.offlineWrites} local changes)` : '';
+      syncChip.textContent = `Offline${suffix}`;
+      syncChip.dataset.status = 'offline';
+      offlineBanner.hidden = false;
+      return;
+    }
+    syncChip.textContent = `Online: ${modeLabel}`;
+    syncChip.dataset.status = 'online';
+    offlineBanner.hidden = true;
   }
 
   const syncService = createSyncService(toast);
-  syncService.subscribe((status) => {
-    syncStatus = status;
+  syncService.subscribe((meta) => {
+    syncMeta = meta;
     updateSyncUi(store.getState());
   });
 
@@ -79,11 +101,29 @@ function bootstrap() {
 
   const features = [];
   const dashboard = initDashboardFeature({ store, modal, navigateToSalesDate });
-  const sales = initSalesFeature({ store, showToast: toast, modal, renderAll });
-  const loyalty = initLoyaltyFeature({ store, showToast: toast, modal, renderAll });
-  const assistant = initAssistantFeature({ store, showToast: toast });
-  const settings = initSettingsFeature({ store, authService, showToast: toast, modal, renderAll });
-  features.push(dashboard, sales, loyalty, assistant, settings);
+  const reports = initReportsFeature({ store, showToast: toast, telemetry });
+  const sales = initSalesFeature({ store, showToast: toast, modal, renderAll, telemetry });
+  const loyalty = initLoyaltyFeature({ store, showToast: toast, modal, renderAll, telemetry });
+  const assistant = initAssistantFeature({ assistantEngine, showToast: toast, telemetry });
+  const settings = initSettingsFeature({
+    store,
+    authService,
+    showToast: toast,
+    modal,
+    renderAll,
+    telemetry,
+    onAssistantConfigUpdated: () => {
+      telemetry.track('assistant_config_updated');
+    },
+    onObservabilityConfigUpdated: async () => {
+      const result = await telemetry.initialize();
+      const ready = [];
+      if (result.posthog.ok) ready.push('PostHog');
+      if (result.sentry.ok) ready.push('Sentry');
+      if (ready.length) toast(`Telemetry ready: ${ready.join(' + ')}`);
+    }
+  });
+  features.push(dashboard, reports, sales, loyalty, assistant, settings);
 
   function renderShell(state) {
     businessNameHeader.textContent = state.settings.businessName || 'CreamTrack Vendor';
@@ -118,6 +158,7 @@ function bootstrap() {
       const choice = await deferredPrompt.userChoice;
       deferredPrompt = null;
       refreshInstallButton();
+      telemetry.track('install_prompt_result', { outcome: choice.outcome });
       toast(choice.outcome === 'accepted' ? 'App installed successfully.' : 'Install cancelled.');
       return;
     }
@@ -141,24 +182,42 @@ function bootstrap() {
     event.preventDefault();
     deferredPrompt = event;
     refreshInstallButton();
+    telemetry.track('install_prompt_shown');
   });
 
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     refreshInstallButton();
+    telemetry.track('install_completed');
     toast('App installed. You can open it from your home screen.');
   });
 
-  window.addEventListener('error', () => {
+  window.addEventListener('error', (event) => {
+    telemetry.captureError(event.error || new Error(event.message || 'Window error'), { area: 'window_error' });
     toast('An unexpected error occurred. Please try again.');
   });
-  window.addEventListener('unhandledrejection', () => {
+  window.addEventListener('unhandledrejection', (event) => {
+    telemetry.captureError(event.reason instanceof Error ? event.reason : new Error(String(event.reason || 'Unhandled rejection')), { area: 'promise_rejection' });
     toast('A background task failed. Check connection and retry.');
   });
 
-  store.subscribe(() => {
+  store.subscribe((state) => {
+    if (state.lastSavedAt !== lastSavedAt) {
+      if (syncMeta.status === 'offline') syncService.recordLocalWrite();
+      lastSavedAt = state.lastSavedAt;
+    }
     renderAll();
   });
+
+  telemetry.initialize().then((result) => {
+    const ready = [];
+    if (result.posthog.ok) ready.push('PostHog');
+    if (result.sentry.ok) ready.push('Sentry');
+    if (ready.length) {
+      telemetry.identify(store.getState().settings.businessName || 'creamtrack-user');
+      telemetry.track('app_boot', { tools: ready.join(',') });
+    }
+  }).catch(() => {});
 
   renderAll();
   refreshInstallButton();

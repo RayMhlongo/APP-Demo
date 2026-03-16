@@ -1,4 +1,4 @@
-import { addDays, startOfWeek, toDate, todayISO } from '../utils/date.js';
+import { addDays, formatLocalISO, startOfWeek, toDate, todayISO } from '../utils/date.js';
 
 const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -6,57 +6,72 @@ function sameDay(a, b) {
   return String(a || '').slice(0, 10) === String(b || '').slice(0, 10);
 }
 
-function money(value, currency = 'ZAR') {
-  const amount = Number(value || 0);
-  try {
-    return new Intl.NumberFormat('en-ZA', { style: 'currency', currency, maximumFractionDigits: 2 }).format(amount);
-  } catch {
-    return `R${amount.toFixed(2)}`;
-  }
+function sumAmounts(entries) {
+  return entries.reduce((acc, entry) => acc + Number(entry.amount || 0), 0);
+}
+
+function countDistinctDays(entries) {
+  return new Set(entries.map((entry) => entry.date)).size;
+}
+
+function isInMonth(date, year, month) {
+  const d = toDate(date);
+  return Boolean(d && d.getFullYear() === year && d.getMonth() === month);
+}
+
+function inRange(date, from, to) {
+  return date >= from && date <= to;
 }
 
 export function getSalesEntries(state) {
-  return state.entries.filter((e) => e.type === 'sale');
+  return state.entries.filter((entry) => entry.type === 'sale');
 }
 
 export function getNoSaleEntries(state) {
-  return state.entries.filter((e) => e.type === 'no_sale');
+  return state.entries.filter((entry) => entry.type === 'no_sale');
 }
 
-export function sum(entries) {
-  return entries.reduce((acc, e) => acc + Number(e.amount || 0), 0);
+export function totalSales(state) {
+  return sumAmounts(getSalesEntries(state));
 }
 
 export function todaySales(state) {
   const today = todayISO();
-  const sales = getSalesEntries(state).filter((e) => sameDay(e.date, today));
-  return {
-    entries: sales,
-    total: sum(sales)
-  };
+  const entries = getSalesEntries(state).filter((entry) => sameDay(entry.date, today));
+  return { entries, total: sumAmounts(entries) };
 }
 
 export function weekSales(state, anchor = new Date()) {
   const start = startOfWeek(anchor);
   const end = addDays(start, 6);
-  const sales = getSalesEntries(state).filter((entry) => {
-    const d = toDate(entry.date);
-    return d && d >= start && d <= end;
-  });
-  return {
-    entries: sales,
-    total: sum(sales)
-  };
+  const from = formatLocalISO(start);
+  const to = formatLocalISO(end);
+  const entries = getSalesEntries(state).filter((entry) => inRange(entry.date, from, to));
+  return { entries, total: sumAmounts(entries), from, to };
 }
 
 export function previousWeekSales(state) {
-  const start = startOfWeek(new Date());
-  const previousAnchor = addDays(start, -1);
-  return weekSales(state, previousAnchor);
+  const currentWeekStart = startOfWeek(new Date());
+  return weekSales(state, addDays(currentWeekStart, -1));
 }
 
-export function totalSales(state) {
-  return sum(getSalesEntries(state));
+export function monthSales(state, anchor = new Date()) {
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const from = formatLocalISO(new Date(year, month, 1));
+  const to = formatLocalISO(new Date(year, month + 1, 0));
+  const entries = getSalesEntries(state).filter((entry) => inRange(entry.date, from, to));
+  return { entries, total: sumAmounts(entries), from, to, year, month };
+}
+
+export function previousMonthSales(state) {
+  const now = new Date();
+  return monthSales(state, new Date(now.getFullYear(), now.getMonth() - 1, 1));
+}
+
+export function sellingDaysThisMonth(state) {
+  const current = monthSales(state);
+  return countDistinctDays(current.entries);
 }
 
 export function noSaleCount(state) {
@@ -64,27 +79,27 @@ export function noSaleCount(state) {
 }
 
 export function reasonDistribution(state) {
-  const reasons = {};
+  const map = {};
   getNoSaleEntries(state).forEach((entry) => {
-    const key = entry.reasonKey || 'other';
-    reasons[key] = (reasons[key] || 0) + 1;
+    const key = String(entry.reasonKey || 'other');
+    map[key] = (map[key] || 0) + 1;
   });
-  return reasons;
+  return map;
 }
 
 export function mostCommonNoSaleReason(state) {
-  const dist = reasonDistribution(state);
-  const top = Object.entries(dist).sort((a, b) => b[1] - a[1])[0];
+  const top = Object.entries(reasonDistribution(state)).sort((a, b) => b[1] - a[1])[0];
   return top ? { reason: top[0], count: top[1] } : null;
 }
 
-export function salesByWeekday(state) {
+export function salesByWeekday(state, { month, year } = {}) {
   const buckets = [0, 0, 0, 0, 0, 0, 0];
   getSalesEntries(state).forEach((entry) => {
     const d = toDate(entry.date);
     if (!d) return;
-    const idx = (d.getDay() + 6) % 7;
-    buckets[idx] += Number(entry.amount || 0);
+    if (Number.isInteger(month) && Number.isInteger(year) && !isInMonth(entry.date, year, month)) return;
+    const index = (d.getDay() + 6) % 7;
+    buckets[index] += Number(entry.amount || 0);
   });
   return buckets;
 }
@@ -94,61 +109,59 @@ export function noSalesByWeekday(state, { month, year } = {}) {
   getNoSaleEntries(state).forEach((entry) => {
     const d = toDate(entry.date);
     if (!d) return;
-    if (Number.isInteger(month) && d.getMonth() !== month) return;
-    if (Number.isInteger(year) && d.getFullYear() !== year) return;
-    const idx = (d.getDay() + 6) % 7;
-    buckets[idx] += 1;
+    if (Number.isInteger(month) && Number.isInteger(year) && !isInMonth(entry.date, year, month)) return;
+    const index = (d.getDay() + 6) % 7;
+    buckets[index] += 1;
   });
   return buckets;
 }
 
 export function strongestDay(state) {
   const buckets = salesByWeekday(state);
-  const max = Math.max(...buckets);
-  if (max <= 0) return null;
-  const idx = buckets.findIndex((amount) => amount === max);
-  return { day: WEEKDAY_SHORT[idx], amount: max };
+  const best = Math.max(...buckets);
+  if (best <= 0) return null;
+  const index = buckets.findIndex((value) => value === best);
+  return { day: WEEKDAY_SHORT[index], amount: best };
 }
 
 export function weakestDay(state) {
   const buckets = salesByWeekday(state);
-  let idx = -1;
-  let min = Infinity;
-  buckets.forEach((amount, i) => {
-    if (amount > 0 && amount < min) {
-      min = amount;
-      idx = i;
+  let weakestAmount = Infinity;
+  let weakestIndex = -1;
+  buckets.forEach((value, index) => {
+    if (value > 0 && value < weakestAmount) {
+      weakestAmount = value;
+      weakestIndex = index;
     }
   });
-  if (idx < 0) return null;
-  return { day: WEEKDAY_SHORT[idx], amount: min };
+  if (weakestIndex < 0) return null;
+  return { day: WEEKDAY_SHORT[weakestIndex], amount: weakestAmount };
 }
 
 export function streakInfo(state) {
-  const soldDays = new Set(getSalesEntries(state).map((e) => e.date));
-  const dates = [...soldDays].sort();
+  const soldDates = [...new Set(getSalesEntries(state).map((entry) => entry.date))].sort();
   let best = 0;
   let current = 0;
-  let prev = null;
-  dates.forEach((date) => {
-    const d = toDate(date);
-    if (!d) return;
-    if (!prev) {
+  let previous = null;
+  soldDates.forEach((iso) => {
+    const date = toDate(iso);
+    if (!date) return;
+    if (!previous) {
       current = 1;
     } else {
-      const diff = (d.getTime() - prev.getTime()) / 86400000;
-      current = diff === 1 ? current + 1 : 1;
+      const diffDays = (date.getTime() - previous.getTime()) / 86400000;
+      current = diffDays === 1 ? current + 1 : 1;
     }
     if (current > best) best = current;
-    prev = d;
+    previous = date;
   });
-  return { bestStreak: best, soldDays: soldDays.size };
+  return { bestStreak: best, soldDays: soldDates.length };
 }
 
 export function businessDayCoverage(state) {
   const now = new Date();
-  const month = now.getMonth();
   const year = now.getFullYear();
+  const month = now.getMonth();
   const operatingDays = Array.isArray(state.settings.operatingDays) && state.settings.operatingDays.length
     ? new Set(state.settings.operatingDays)
     : new Set([1, 2, 3, 4, 5, 6]);
@@ -167,7 +180,7 @@ export function businessDayCoverage(state) {
     const weekday = cursor.getDay();
     if (operatingDays.has(weekday)) {
       businessDays += 1;
-      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+      const key = formatLocalISO(cursor);
       if (soldSet.has(key)) soldDays += 1;
       else if (noSaleSet.has(key)) noSaleDays += 1;
       else missingDays += 1;
@@ -178,32 +191,73 @@ export function businessDayCoverage(state) {
   return { businessDays, soldDays, noSaleDays, missingDays };
 }
 
+export function averageDailySales(state) {
+  const sales = getSalesEntries(state);
+  if (!sales.length) return { amount: 0, days: 0 };
+  const days = countDistinctDays(sales);
+  return {
+    amount: days > 0 ? sumAmounts(sales) / days : 0,
+    days
+  };
+}
+
+export function averageWeeklySales(state) {
+  const sales = getSalesEntries(state);
+  if (!sales.length) return { amount: 0, weeks: 0 };
+  const dates = sales.map((entry) => toDate(entry.date)).filter(Boolean).sort((a, b) => a - b);
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  const elapsedDays = Math.max(1, Math.ceil((last.getTime() - first.getTime()) / 86400000) + 1);
+  const weeks = Math.max(1, Math.ceil(elapsedDays / 7));
+  return {
+    amount: sumAmounts(sales) / weeks,
+    weeks
+  };
+}
+
 export function weekOverWeek(state) {
   const current = weekSales(state);
   const previous = previousWeekSales(state);
-  if (previous.total <= 0) {
-    return {
-      current: current.total,
-      previous: previous.total,
-      changePct: null
-    };
-  }
   return {
     current: current.total,
     previous: previous.total,
-    changePct: ((current.total - previous.total) / previous.total) * 100
+    changePct: previous.total > 0 ? ((current.total - previous.total) / previous.total) * 100 : null
+  };
+}
+
+export function monthOverMonth(state) {
+  const current = monthSales(state);
+  const previous = previousMonthSales(state);
+  return {
+    current: current.total,
+    previous: previous.total,
+    changePct: previous.total > 0 ? ((current.total - previous.total) / previous.total) * 100 : null
+  };
+}
+
+export function missedDayPatterns(state) {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  const buckets = noSalesByWeekday(state, { month, year });
+  const top = Math.max(...buckets);
+  const index = buckets.findIndex((value) => value === top);
+  return {
+    buckets,
+    topCount: top,
+    topDay: index >= 0 ? WEEKDAY_SHORT[index] : ''
   };
 }
 
 export function getEntryStatusByDate(state) {
-  const status = new Map();
+  const map = new Map();
   getNoSaleEntries(state).forEach((entry) => {
-    status.set(entry.date, { kind: 'nosale', entry });
+    map.set(entry.date, { kind: 'nosale', entry });
   });
   getSalesEntries(state).forEach((entry) => {
-    status.set(entry.date, { kind: 'sold', entry });
+    map.set(entry.date, { kind: 'sold', entry });
   });
-  return status;
+  return map;
 }
 
 export function recentActivity(state, limit = 8) {
@@ -211,107 +265,103 @@ export function recentActivity(state, limit = 8) {
 }
 
 export function buildInsights(state) {
-  const currency = state.settings.currency || 'ZAR';
-  const today = todaySales(state);
-  const week = weekSales(state);
-  const wow = weekOverWeek(state);
-  const streak = streakInfo(state);
+  const results = [];
+  if (!state.entries.length) {
+    results.push('No logs yet. Start by recording a sale or a no-sale day.');
+    return results;
+  }
+
   const strongest = strongestDay(state);
   const weakest = weakestDay(state);
   const commonReason = mostCommonNoSaleReason(state);
+  const streak = streakInfo(state);
   const coverage = businessDayCoverage(state);
-  const now = new Date();
-  const missedBuckets = noSalesByWeekday(state, { month: now.getMonth(), year: now.getFullYear() });
-  const topMissCount = Math.max(...missedBuckets);
-  const topMissIndex = missedBuckets.findIndex((count) => count === topMissCount);
+  const wow = weekOverWeek(state);
+  const mom = monthOverMonth(state);
+  const dailyAvg = averageDailySales(state);
+  const weeklyAvg = averageWeeklySales(state);
+  const missedPatterns = missedDayPatterns(state);
+  const currentMonthSellingDays = sellingDaysThisMonth(state);
 
-  const insights = [];
-  if (!state.entries.length) {
-    insights.push('No logs recorded yet. Start by adding your first sale or no-sale day.');
-    return insights;
-  }
-
-  insights.push(`Today sales: ${today.entries.length} transaction(s), ${money(today.total, currency)} total.`);
-  insights.push(`This week: ${week.entries.length} sales worth ${money(week.total, currency)}.`);
-
-  if (strongest) insights.push(`${strongest.day} is your strongest sales day so far.`);
-  if (weakest) insights.push(`${weakest.day} is your weakest sales day so far.`);
-  if (commonReason) insights.push(`${commonReason.reason.replace(/_/g, ' ')} is your top no-sale reason (${commonReason.count}).`);
+  if (strongest) results.push(`${strongest.day} is your strongest sales day.`);
+  if (weakest) results.push(`${weakest.day} is your weakest sales day.`);
+  if (commonReason) results.push(`${commonReason.reason.replace(/_/g, ' ')} is the top no-sale reason (${commonReason.count}x).`);
+  results.push(`Selling days this month: ${currentMonthSellingDays}.`);
 
   if (coverage.businessDays > 0) {
-    insights.push(`You sold on ${coverage.soldDays} of ${coverage.businessDays} operating days this month.`);
-    if (coverage.missingDays > 0) insights.push(`${coverage.missingDays} operating day(s) this month still have no log.`);
+    results.push(`You sold on ${coverage.soldDays} of ${coverage.businessDays} operating days this month.`);
+    if (coverage.missingDays > 0) results.push(`${coverage.missingDays} operating days this month still have no log.`);
   }
 
-  if (topMissCount > 1 && topMissIndex >= 0) {
-    insights.push(`You missed ${topMissCount} ${WEEKDAY_SHORT[topMissIndex]}s this month.`);
-  }
+  if (streak.bestStreak > 0) results.push(`Longest sales streak is ${streak.bestStreak} day(s).`);
 
   if (wow.changePct !== null) {
-    const direction = wow.changePct >= 0 ? 'up' : 'down';
-    insights.push(`Week-over-week sales are ${direction} ${Math.abs(wow.changePct).toFixed(1)}%.`);
-    if (wow.changePct <= -35 && wow.previous >= 1) {
-      insights.push('This week dropped sharply vs last week. Check stock, weather, and transport risks.');
-    }
+    results.push(`Week-over-week sales are ${wow.changePct >= 0 ? 'up' : 'down'} ${Math.abs(wow.changePct).toFixed(1)}%.`);
+  } else {
+    results.push('Week-over-week needs at least one previous week with sales.');
   }
 
-  if (streak.bestStreak > 0) insights.push(`Longest sales streak: ${streak.bestStreak} day(s).`);
-  return insights.slice(0, 8);
+  if (mom.changePct !== null) {
+    results.push(`Month-over-month sales are ${mom.changePct >= 0 ? 'up' : 'down'} ${Math.abs(mom.changePct).toFixed(1)}%.`);
+  } else {
+    results.push('Month-over-month needs previous month data.');
+  }
+
+  results.push(`Average daily sales: ${dailyAvg.amount.toFixed(2)}.`);
+  results.push(`Average weekly sales: ${weeklyAvg.amount.toFixed(2)}.`);
+
+  if (missedPatterns.topCount > 1 && missedPatterns.topDay) {
+    results.push(`${missedPatterns.topDay} is your most missed day this month (${missedPatterns.topCount}).`);
+  }
+
+  return results.slice(0, 12);
 }
 
 export function assistantReply(question, state) {
   const q = String(question || '').toLowerCase().trim();
-  if (!q) return 'Ask me about sales, missed-day reasons, loyalty activity, or week-over-week trends.';
+  if (!q) return 'Ask about sales, no-sale patterns, streaks, and trends.';
 
-  const currency = state.settings.currency || 'ZAR';
   const today = todaySales(state);
   const week = weekSales(state);
+  const month = monthSales(state);
   const wow = weekOverWeek(state);
+  const mom = monthOverMonth(state);
   const commonReason = mostCommonNoSaleReason(state);
   const strongest = strongestDay(state);
   const weakest = weakestDay(state);
   const streak = streakInfo(state);
-  const coverage = businessDayCoverage(state);
-  const loyaltyCount = state.customers.length;
+  const dailyAvg = averageDailySales(state);
+  const weeklyAvg = averageWeeklySales(state);
 
-  if (q.includes('today')) {
-    return `Today: ${today.entries.length} sale entr${today.entries.length === 1 ? 'y' : 'ies'}, total ${money(today.total, currency)}.`;
+  if (q.includes('today')) return `Today: ${today.entries.length} sale entries, total ${today.total.toFixed(2)}.`;
+  if (q.includes('week') && q.includes('summary')) return `This week total is ${week.total.toFixed(2)} from ${week.entries.length} sales.`;
+  if (q.includes('month') && q.includes('summary')) return `This month total is ${month.total.toFixed(2)} from ${month.entries.length} sales.`;
+  if (q.includes('strong')) return strongest ? `${strongest.day} is your strongest sales day.` : 'Not enough data yet.';
+  if (q.includes('weak')) return weakest ? `${weakest.day} is your weakest sales day.` : 'Not enough data yet.';
+  if (q.includes('reason')) {
+    return commonReason ? `Top no-sale reason is ${commonReason.reason.replace(/_/g, ' ')} (${commonReason.count} times).` : 'No no-sale reasons recorded yet.';
   }
-  if (q.includes('week') && (q.includes('summary') || q.includes('sale') || q.includes('total'))) {
-    return `This week: ${week.entries.length} sales, total ${money(week.total, currency)}.`;
-  }
+  if (q.includes('streak')) return `Longest streak is ${streak.bestStreak} day(s).`;
   if (q.includes('week') && q.includes('over')) {
-    if (wow.changePct === null) return 'Week-over-week comparison is available after at least one previous week with sales.';
-    return `Week-over-week is ${wow.changePct >= 0 ? 'up' : 'down'} ${Math.abs(wow.changePct).toFixed(1)}%.`;
+    return wow.changePct === null
+      ? 'Week-over-week comparison is not available yet.'
+      : `Week-over-week is ${wow.changePct >= 0 ? 'up' : 'down'} ${Math.abs(wow.changePct).toFixed(1)}%.`;
   }
-  if (q.includes('reason') || q.includes('missed')) {
-    return commonReason
-      ? `Most common no-sale reason is "${commonReason.reason.replace(/_/g, ' ')}" (${commonReason.count} time${commonReason.count === 1 ? '' : 's'}).`
-      : 'No missed trading days logged yet.';
+  if (q.includes('month') && q.includes('over')) {
+    return mom.changePct === null
+      ? 'Month-over-month comparison is not available yet.'
+      : `Month-over-month is ${mom.changePct >= 0 ? 'up' : 'down'} ${Math.abs(mom.changePct).toFixed(1)}%.`;
   }
-  if (q.includes('strong') || q.includes('best')) {
-    return strongest ? `${strongest.day} is currently your strongest sales day.` : 'Not enough sales yet to identify a strongest day.';
-  }
-  if (q.includes('weak') || q.includes('drop')) {
-    return weakest ? `${weakest.day} is currently your weakest sales day.` : 'Not enough sales yet to identify a weakest day.';
-  }
-  if (q.includes('streak')) {
-    return `Your longest sales streak is ${streak.bestStreak} day(s).`;
-  }
-  if (q.includes('loyal') || q.includes('customer')) {
-    return `You currently have ${loyaltyCount} loyalty customer profile${loyaltyCount === 1 ? '' : 's'}.`;
-  }
-  if (q.includes('month') || q.includes('operating')) {
-    return `This month: sold ${coverage.soldDays}/${coverage.businessDays} operating days, no-sale logged on ${coverage.noSaleDays}, missing logs on ${coverage.missingDays}.`;
+  if (q.includes('average')) {
+    return `Average daily sales are ${dailyAvg.amount.toFixed(2)} and average weekly sales are ${weeklyAvg.amount.toFixed(2)}.`;
   }
 
   return [
-    'I can help with:',
-    '- today sales',
-    '- week summary',
-    '- week over week',
-    '- missed-day reasons',
-    '- strongest/weakest day',
-    '- loyalty activity'
+    'I can answer:',
+    '- today / week / month summary',
+    '- strongest and weakest day',
+    '- no-sale reason patterns',
+    '- streak and averages',
+    '- week-over-week and month-over-month'
   ].join('\n');
 }
