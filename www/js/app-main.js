@@ -1,4 +1,4 @@
-﻿const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzEzfbRaw0tesxfpw1jGHakZVNlZg2rnwV2MXKUg5faA_u5eSNglHJk2YcoLGItMtBx/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzEzfbRaw0tesxfpw1jGHakZVNlZg2rnwV2MXKUg5faA_u5eSNglHJk2YcoLGItMtBx/exec';
 const STORE_KEY  = 'cathdelCreamyV3';
 const OUTBOX_KEY = STORE_KEY+'-outbox';
 const ALERTS_KEY = STORE_KEY+'-alerts';
@@ -42,13 +42,13 @@ function defaultDB(){
       {id:'PRD-03',name:'Family Pack',category:'Family',price:100,stock:10}
     ],
     customers:[
-      {id:'P-001',qrId:'CC-P-001',profileType:'child',parentName:'Akami Mom',childName:'Akami',displayName:'Akami',grade:'5',phone:'+27723408365',credit:0,accountId:'WAL-0001'},
-      {id:'P-002',qrId:'CC-P-002',profileType:'child',parentName:'Damian Mom',childName:'Damian',displayName:'Damian',grade:'3',phone:'+27768224643',credit:0,accountId:'WAL-0002'},
+      {id:'P-001',qrId:'CC-P-001',profileType:'child',parentName:'Guardian 1',childName:'Customer A',displayName:'Customer A',grade:'5',phone:'+27723408365',credit:0,accountId:'WAL-0001'},
+      {id:'P-002',qrId:'CC-P-002',profileType:'child',parentName:'Guardian 2',childName:'Customer B',displayName:'Customer B',grade:'3',phone:'+27768224643',credit:0,accountId:'WAL-0002'},
       {id:'P-003',qrId:'CC-P-003',profileType:'child',parentName:'Gali and Opfuna Mom',childName:'Gali/Opfuna',displayName:'Gali/Opfuna',grade:'6',phone:'+27818092014',credit:0,accountId:'WAL-0003'}
     ],
     wallets:[
-      {id:'WAL-0001',label:'Akami Family',balance:0,members:['P-001']},
-      {id:'WAL-0002',label:'Damian Family',balance:0,members:['P-002']},
+      {id:'WAL-0001',label:'Customer A Family',balance:0,members:['P-001']},
+      {id:'WAL-0002',label:'Customer B Family',balance:0,members:['P-002']},
       {id:'WAL-0003',label:'Gali and Opfuna Family',balance:0,members:['P-003']}
     ],
     orders:[],
@@ -98,10 +98,10 @@ function customerDisplayName(c){
 function customerSubtitle(c){
   if(!c)return '';
   if(c.profileType==='adult'){
-    return c.parentName?`Adult • Contact: ${c.parentName}`:'Adult account';
+    return c.parentName?`Adult � Contact: ${c.parentName}`:'Adult account';
   }
   const gradePart=c.grade?`Grade ${c.grade}`:'No grade';
-  return `${gradePart}${c.parentName?` • Guardian: ${c.parentName}`:''}`;
+  return `${gradePart}${c.parentName?` � Guardian: ${c.parentName}`:''}`;
 }
 function walletLabelFromCustomer(c){
   const base=(c.parentName||c.displayName||c.childName||`Wallet ${c.id||''}`).trim();
@@ -848,7 +848,7 @@ function topUpWalletByCustomerId(id){
   syncWalletMembers(wallet.id);
   saveLocal();
   refreshVisibleScreen();
-  toast(`✅ Wallet topped up by R${amount}`,'ok');
+  toast(`? Wallet topped up by R${amount}`,'ok');
 }
 function handleScan(qrId){
   const id=String(qrId||'').trim();
@@ -964,7 +964,7 @@ function recordSale(){
   if(cnt===DB.settings.threshold)showRewardPopup(cust,cnt);
   else{
     const rem=DB.settings.threshold-cnt;
-    toast(`\u2705 R${order.total} recorded! Cash R${cashPaid} • Credit R${creditUsed}. ${rem>0?rem+' more to reward':''}`, 'ok');
+    toast(`\u2705 R${order.total} recorded! Cash R${cashPaid} � Credit R${creditUsed}. ${rem>0?rem+' more to reward':''}`, 'ok');
   }
   evaluateOperationalAlerts();
 }
@@ -1689,7 +1689,7 @@ function linkGoogleAccount(){
   DB.settings.googleClientId=String(entered||'').trim();
   saveLocal();
   pushSetting('googleClientId',DB.settings.googleClientId);
-  toast(DB.settings.googleClientId?'✅ Google client ID saved':'Client ID cleared','ok');
+  toast(DB.settings.googleClientId?'? Google client ID saved':'Client ID cleared','ok');
 }
 function ensureGoogleClientId(interactive=true){
   const id=String(DB.settings.googleClientId||'').trim();
@@ -1769,7 +1769,7 @@ async function backupToGoogleAccount(){
       body
     });
     if(!res.ok)throw new Error(await res.text());
-    toast('✅ Backup saved to Google account','ok');
+    toast('? Backup saved to Google account','ok');
   }catch(err){
     toast('Google backup failed','er');
     console.error(err);

@@ -1,4 +1,4 @@
-const OFFLINE_WRITES_KEY = 'creamtrack.offline_writes';
+const OFFLINE_WRITES_KEY = 'cathdel.creamy.offline_writes';
 
 function readOfflineWrites() {
   try {

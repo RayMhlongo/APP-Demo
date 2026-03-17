@@ -14,7 +14,7 @@ import { createTelemetryService } from './services/telemetry.js';
 import { createStore } from './state/store.js';
 import { todayISO } from './utils/date.js';
 
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '2.0.0';
 
 function isStandaloneMode() {
   const mq = window.matchMedia ? window.matchMedia('(display-mode: standalone)').matches : false;
@@ -71,7 +71,7 @@ function bootstrap() {
 
   function updateSyncUi(state) {
     const linked = state.settings.googleConnection?.connected;
-    const modeLabel = linked ? 'Google linked' : 'Local storage';
+    const modeLabel = linked ? 'Google linked' : 'Local only';
     if (syncMeta.status === 'offline') {
       const suffix = syncMeta.offlineWrites > 0 ? ` (${syncMeta.offlineWrites} local changes)` : '';
       syncChip.textContent = `Offline${suffix}`;
@@ -101,7 +101,7 @@ function bootstrap() {
 
   const features = [];
   const dashboard = initDashboardFeature({ store, modal, navigateToSalesDate });
-  const reports = initReportsFeature({ store, showToast: toast, telemetry });
+  const reports = initReportsFeature({ store, showToast: toast, telemetry, modal });
   const sales = initSalesFeature({ store, showToast: toast, modal, renderAll, telemetry });
   const loyalty = initLoyaltyFeature({ store, showToast: toast, modal, renderAll, telemetry });
   const assistant = initAssistantFeature({ assistantEngine, showToast: toast, telemetry });
@@ -126,8 +126,8 @@ function bootstrap() {
   features.push(dashboard, reports, sales, loyalty, assistant, settings);
 
   function renderShell(state) {
-    businessNameHeader.textContent = state.settings.businessName || 'CreamTrack Vendor';
-    brandEyebrow.textContent = state.settings.valueProp || 'Small Business Console';
+    businessNameHeader.textContent = state.settings.businessName || 'Cathdel Creamy';
+    brandEyebrow.textContent = state.settings.valueProp || 'Track sales, loyalty, and missed trading days in one place.';
     updateSyncUi(state);
   }
 
@@ -214,7 +214,7 @@ function bootstrap() {
     if (result.posthog.ok) ready.push('PostHog');
     if (result.sentry.ok) ready.push('Sentry');
     if (ready.length) {
-      telemetry.identify(store.getState().settings.businessName || 'creamtrack-user');
+      telemetry.identify(store.getState().settings.businessName || 'cathdel-creamy-user');
       telemetry.track('app_boot', { tools: ready.join(',') });
     }
   }).catch(() => {});

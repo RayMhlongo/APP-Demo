@@ -332,36 +332,98 @@ export function assistantReply(question, state) {
   const streak = streakInfo(state);
   const dailyAvg = averageDailySales(state);
   const weeklyAvg = averageWeeklySales(state);
+  const coverage = businessDayCoverage(state);
+  const missed = missedDayPatterns(state);
+  const loyaltyCustomers = state.customers.length;
+  const walletCount = state.wallets.length;
+  const totalNoSaleLogs = getNoSaleEntries(state).length;
 
-  if (q.includes('today')) return `Today: ${today.entries.length} sale entries, total ${today.total.toFixed(2)}.`;
-  if (q.includes('week') && q.includes('summary')) return `This week total is ${week.total.toFixed(2)} from ${week.entries.length} sales.`;
-  if (q.includes('month') && q.includes('summary')) return `This month total is ${month.total.toFixed(2)} from ${month.entries.length} sales.`;
-  if (q.includes('strong')) return strongest ? `${strongest.day} is your strongest sales day.` : 'Not enough data yet.';
-  if (q.includes('weak')) return weakest ? `${weakest.day} is your weakest sales day.` : 'Not enough data yet.';
-  if (q.includes('reason')) {
-    return commonReason ? `Top no-sale reason is ${commonReason.reason.replace(/_/g, ' ')} (${commonReason.count} times).` : 'No no-sale reasons recorded yet.';
+  function hasAny(words) {
+    return words.some((word) => q.includes(word));
   }
-  if (q.includes('streak')) return `Longest streak is ${streak.bestStreak} day(s).`;
-  if (q.includes('week') && q.includes('over')) {
-    return wow.changePct === null
-      ? 'Week-over-week comparison is not available yet.'
-      : `Week-over-week is ${wow.changePct >= 0 ? 'up' : 'down'} ${Math.abs(wow.changePct).toFixed(1)}%.`;
+
+  if (hasAny(['hello', 'hi', 'hey'])) {
+    return 'I can help with today sales, trends, missed days, reasons, streaks, averages, and loyalty summaries.';
   }
-  if (q.includes('month') && q.includes('over')) {
-    return mom.changePct === null
-      ? 'Month-over-month comparison is not available yet.'
-      : `Month-over-month is ${mom.changePct >= 0 ? 'up' : 'down'} ${Math.abs(mom.changePct).toFixed(1)}%.`;
+
+  if (hasAny(['today', 'daily']) && hasAny(['sale', 'sold', 'summary', 'total'])) {
+    return `Today: ${today.entries.length} sale entries, total ${today.total.toFixed(2)}.`;
   }
-  if (q.includes('average')) {
+
+  if (hasAny(['week summary', 'weekly summary', 'this week', 'weekly'])) {
+    return `This week total is ${week.total.toFixed(2)} from ${week.entries.length} sales (${week.from} to ${week.to}).`;
+  }
+
+  if (hasAny(['month summary', 'monthly summary', 'this month', 'monthly'])) {
+    return `This month total is ${month.total.toFixed(2)} from ${month.entries.length} sales (${month.from} to ${month.to}).`;
+  }
+
+  if (hasAny(['strongest', 'best day', 'top day', 'highest day'])) {
+    return strongest ? `${strongest.day} is your strongest sales day.` : 'Not enough data yet to identify the strongest day.';
+  }
+
+  if (hasAny(['weakest', 'worst day', 'lowest day'])) {
+    return weakest ? `${weakest.day} is your weakest sales day.` : 'Not enough data yet to identify the weakest day.';
+  }
+
+  if (hasAny(['reason', 'why no sale', 'no-sale reason', 'did not sell'])) {
+    if (!commonReason) return 'No no-sale reasons recorded yet.';
+    return `Top no-sale reason is ${commonReason.reason.replace(/_/g, ' ')} (${commonReason.count} times).`;
+  }
+
+  if (hasAny(['missed', 'not sold', 'no sale days', 'unlogged'])) {
+    if (coverage.businessDays <= 0) return 'No operating days configured for this month yet.';
+    return `This month: sold ${coverage.soldDays}/${coverage.businessDays} operating days, no-sale logs ${coverage.noSaleDays}, missing logs ${coverage.missingDays}.`;
+  }
+
+  if (hasAny(['streak', 'consecutive'])) {
+    return streak.bestStreak > 0
+      ? `Longest sales streak is ${streak.bestStreak} day(s).`
+      : 'No sales streak available yet.';
+  }
+
+  if (hasAny(['average', 'avg'])) {
     return `Average daily sales are ${dailyAvg.amount.toFixed(2)} and average weekly sales are ${weeklyAvg.amount.toFixed(2)}.`;
   }
 
+  if (hasAny(['week over week', 'compare week', 'last week vs', 'wow'])) {
+    return wow.changePct === null
+      ? 'Week-over-week comparison is not available yet.'
+      : `Week-over-week is ${wow.changePct >= 0 ? 'up' : 'down'} ${Math.abs(wow.changePct).toFixed(1)}% (${wow.current.toFixed(2)} vs ${wow.previous.toFixed(2)}).`;
+  }
+
+  if (hasAny(['month over month', 'compare month', 'last month vs', 'mom'])) {
+    return mom.changePct === null
+      ? 'Month-over-month comparison is not available yet.'
+      : `Month-over-month is ${mom.changePct >= 0 ? 'up' : 'down'} ${Math.abs(mom.changePct).toFixed(1)}% (${mom.current.toFixed(2)} vs ${mom.previous.toFixed(2)}).`;
+  }
+
+  if (hasAny(['loyalty', 'customer', 'wallet', 'qr'])) {
+    return `Loyalty overview: ${loyaltyCustomers} customer profile(s) across ${walletCount} wallet(s).`;
+  }
+
+  if (hasAny(['report', 'explain'])) {
+    return [
+      `Current view: ${week.entries.length} sales this week totaling ${week.total.toFixed(2)}.`,
+      `No-sale logs recorded: ${totalNoSaleLogs}.`,
+      commonReason ? `Top no-sale reason: ${commonReason.reason.replace(/_/g, ' ')}.` : 'No top no-sale reason yet.'
+    ].join(' ');
+  }
+
+  if (hasAny(['pattern', 'trend'])) {
+    const patternLine = missed.topCount > 0 && missed.topDay
+      ? `${missed.topDay} is the most missed day this month (${missed.topCount}).`
+      : 'No clear missed-day pattern yet.';
+    return `${patternLine} Week total is ${week.total.toFixed(2)} and month total is ${month.total.toFixed(2)}.`;
+  }
+
   return [
-    'I can answer:',
-    '- today / week / month summary',
-    '- strongest and weakest day',
-    '- no-sale reason patterns',
-    '- streak and averages',
-    '- week-over-week and month-over-month'
+    'Try asking:',
+    '- today / week / month sales summary',
+    '- strongest or weakest day',
+    '- missed-day and no-sale reason patterns',
+    '- streaks and averages',
+    '- week-over-week or month-over-month',
+    '- loyalty/customer overview'
   ].join('\n');
 }

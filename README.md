@@ -1,72 +1,42 @@
-# CreamTrack Vendor
+# Cathdel Creamy
 
-CreamTrack Vendor is a mobile-first business management PWA for small vendors (ice-cream style businesses) to track sales, missed trading days, customer loyalty, and practical business insights.
+Cathdel Creamy is a mobile-first, installable PWA built for a real small vendor business.  
+It helps the owner track sales, missed trading days, loyalty/customer activity, QR usage, and practical business insights in one place.
 
-## Product Overview
+## Product Value
 
-This project is designed as a realistic startup MVP:
+- Record daily sales quickly
+- Log no-sale days with reasons
+- Track trends with dashboard insights
+- Manage customers, wallets, and QR profiles
+- Export business reports (CSV)
+- Work offline with local persistence
+- Optional Google backup and AI assistant integrations
 
-- Premium-feeling mobile UX
-- Installable PWA with offline-first behavior
-- Rule-based intelligence that explains business performance
-- Exportable reports for operational and month-end review
-- Optional observability and AI integrations with graceful fallback
+## Core Features
 
-## Recruiter-Impressive Features Added
-
-1. Smart insights engine:
-- strongest/weakest sales day
-- top no-sale reason
-- sales streaks
-- selling days this month
-- week-over-week and month-over-month changes
-- average daily and average weekly sales
-
-2. Strong data architecture:
-- centralized storage/sanitization layer
-- explicit model definitions (`src/services/models.js`)
-- centralized validation (`src/services/validation.js`)
-- predictable store updates (`src/state/store.js`)
-
-3. Report Studio:
-- date-range report generation
-- filtered sales CSV
-- filtered no-sale CSV
-- summary CSV
-- print-friendly report view
-
-4. Offline-first reliability:
-- clear online/offline indicator
-- local-write awareness while offline
-- honest messaging (no fake cloud sync states)
-- PWA shell caching and resilient loading
-
-5. Product observability:
-- optional PostHog tracking
-- optional Sentry error monitoring
-- safe no-config fallback (app still works fully)
-
-## Core Product Capabilities
-
-- Daily sale logging with edit/delete protection
-- No-sale day logging with reason and notes
-- Loyalty/customer management (child and adult profiles)
-- Shared wallet support for siblings/family spending
-- QR generation and scanning
-- Assistant that always works locally and can optionally use external AI
-- Google account linking + Drive backup/restore
+- Owner dashboard with summary cards, trends, heatmap, and recent activity
+- Sales and no-sale logging with validation
+- Reason analytics for missed trading days
+- Loyalty/customer management (child + adult profiles)
+- Shared wallet behavior for siblings/families
+- QR generation and scanning tools with reset/clear controls
+- Assistant with expanded business-question coverage
+- Settings for business rules, operating days, backup, and integrations
+- Export and backup tooling with truthful success/error messaging
 
 ## Tech Stack
 
-- HTML, CSS, Vanilla JavaScript (ES modules)
-- Local persistence: `localStorage`
-- PWA: `manifest.json` + `service-worker.js`
-- Capacitor Android wrapper
+- Vanilla JS modules (`src/`)
+- CSS design tokens + component styles
+- LocalStorage state layer with sanitization/migration
+- Service worker + manifest for PWA install/offline behavior
+- Capacitor Android wrapper for APK delivery
 - Optional integrations:
-  - Google Identity Services + Drive appData backup
-  - PostHog (analytics/event tracking)
+  - Google OAuth + Drive appData backup (web flow)
+  - PostHog (analytics)
   - Sentry (error monitoring)
-  - Groq/OpenRouter (assistant intelligence)
+  - Groq/OpenRouter (assistant remote intelligence)
 
 ## Project Structure
 
@@ -81,108 +51,58 @@ This project is designed as a realistic startup MVP:
     /sales
     /settings
   /services
-    analytics.js
-    assistant-engine.js
-    auth.js
-    models.js
-    reports.js
-    storage.js
-    sync.js
-    telemetry.js
-    validation.js
   /state
   /styles
   /utils
 ```
 
-## Running Locally
+## Local Setup (PWA)
 
-1. Clone repo.
-2. Open `APP-Demo`.
-3. Start any static server from project root:
-   - `python -m http.server 8080`
-   - or `npx serve .`
-4. Visit `http://localhost:8080`.
+1. Clone the repo.
+2. Serve the project on HTTPS (recommended) or localhost.
+3. Open `index.html` through the server.
+4. Install from browser menu (`Add to Home Screen`) for mobile-like usage.
 
-## PWA Notes
+## Android APK Build (Capacitor)
 
-- Use HTTPS in production for best install/camera behavior.
-- Install prompt appears when browser supports `beforeinstallprompt`.
-- Core flows remain usable offline (local saves continue).
+```bash
+npm install
+npm run cap:sync
+npm run apk:debug
+```
 
-## Optional Integration Setup
+If local Android SDK is not configured, use the GitHub Actions release workflow to build APK automatically.
 
-### Google Auth + Backup
+## Google Auth and Backup Setup
 
-1. Create OAuth Client ID (Web app) in Google Cloud.
-2. Add authorized JavaScript origins for deployed app URLs.
+Google features require configuration and environment support.
+
+1. Create a Google OAuth Client ID (Web Application) in Google Cloud.
+2. Add your deployed app origin to **Authorized JavaScript origins**.
 3. Enable Google Drive API.
 4. In app Settings:
    - set **Google OAuth Client ID**
-   - connect account
-   - use backup/restore buttons
+   - save settings
+   - then connect Google
 
-### PostHog (Free Tier)
+### Important APK Note
 
-1. Create PostHog project.
-2. Copy project key.
-3. In app Settings > Observability:
-   - set **PostHog Project Key**
-   - optionally set host (default: `https://app.posthog.com`)
-4. Save settings.
+The current APK wrapper uses a web popup OAuth flow. In many APK WebView contexts, Google popup OAuth is unsupported.  
+In that case, the app now shows an honest unsupported message instead of false success.
 
-Tracked events include:
-- sale/no-sale logs
-- report generation/exports
-- assistant usage/failures
-- Google connect/backup/restore attempts
-- QR scan lifecycle
-- install prompt events
+## Optional Observability Setup
 
-### Sentry (Free Tier)
+- Add PostHog project key/host in Settings to enable event tracking.
+- Add Sentry DSN in Settings to enable error monitoring.
+- App remains fully functional if these are not configured.
 
-1. Create Sentry project (Browser/JavaScript).
-2. Copy DSN.
-3. In app Settings > Observability:
-   - set **Sentry DSN**
-4. Save settings.
+## Screenshots
 
-### Assistant AI (Optional: Groq or OpenRouter)
+- `screenshots/dashboard.png` (placeholder)
+- `screenshots/sales.png` (placeholder)
+- `screenshots/loyalty-qr.png` (placeholder)
+- `screenshots/settings.png` (placeholder)
 
-Without API key, assistant uses reliable local insights only.
+## Why This Project
 
-To enable AI:
-1. Pick provider in Settings > Assistant Intelligence.
-2. Add API key.
-3. Optionally override model/base URL.
-4. Save settings.
-
-If remote AI fails, app automatically falls back to local assistant responses.
-
-## Android APK (Capacitor)
-
-From project root:
-
-1. `npm install`
-2. `npm run cap:sync`
-3. `npm run apk:debug`
-
-Expected output path:
-
-- `android/app/build/outputs/apk/debug/`
-
-## Deployment
-
-The project is static-host friendly and works with GitHub Pages, Cloudflare Pages, Netlify, or Vercel static hosting.
-
-## Screenshots Placeholders
-
-- Dashboard (KPIs + trends + insights + heatmap)
-- Sales + no-sale logging
-- Loyalty + wallets + QR
-- Assistant (local + optional AI)
-- Settings + backups + observability
-
-## Why This Matters
-
-CreamTrack Vendor demonstrates practical startup engineering: clean architecture, mobile-first UX, offline resilience, analytics-ready product instrumentation, and real owner-facing value without expensive infrastructure.
+Cathdel Creamy demonstrates a practical startup-style MVP: clean frontend architecture, mobile-first UX, offline resilience, and trustworthy business workflows suitable for real small-business operations.

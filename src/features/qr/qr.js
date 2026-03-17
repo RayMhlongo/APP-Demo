@@ -17,7 +17,7 @@ export function renderQrCode(container, value, options = {}) {
     text: code,
     width: Number(options.width || 180),
     height: Number(options.height || 180),
-    colorDark: options.colorDark || '#0f766e',
+    colorDark: options.colorDark || '#2b8ea4',
     colorLight: options.colorLight || '#ffffff',
     correctLevel: window.QRCode.CorrectLevel.H
   });

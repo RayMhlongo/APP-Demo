@@ -1,26 +1,20 @@
 import { exportBackup, importBackup } from '../../services/storage.js';
+import { exportTextFile } from '../../services/file-actions.js';
 import { escapeHtml } from '../../utils/format.js';
 import { validateSettingsInput } from '../../services/validation.js';
 
 const DAYS = [
-  { value: 1, label: 'Monday' },
-  { value: 2, label: 'Tuesday' },
-  { value: 3, label: 'Wednesday' },
-  { value: 4, label: 'Thursday' },
-  { value: 5, label: 'Friday' },
-  { value: 6, label: 'Saturday' },
-  { value: 0, label: 'Sunday' }
+  { value: 1, label: 'Mon' },
+  { value: 2, label: 'Tue' },
+  { value: 3, label: 'Wed' },
+  { value: 4, label: 'Thu' },
+  { value: 5, label: 'Fri' },
+  { value: 6, label: 'Sat' },
+  { value: 0, label: 'Sun' }
 ];
 
-function downloadBlob(filename, text, mime = 'text/plain;charset=utf-8') {
-  const blob = new Blob([text], { type: mime });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(link.href);
+function csvRow(values) {
+  return values.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',');
 }
 
 function toggleButtonBusy(button, busy, busyLabel = 'Working...') {
@@ -41,28 +35,53 @@ export function initSettingsFeature({
   onObservabilityConfigUpdated
 }) {
   const form = document.getElementById('settingsForm');
-  const operatingDaysSelect = document.getElementById('settingOperatingDays');
+  const operatingDaysPicker = document.getElementById('operatingDaysPicker');
   const statusEl = document.getElementById('googleStatus');
   const telemetryStatusEl = document.getElementById('telemetryStatus');
   const connectBtn = document.getElementById('googleConnectBtn');
   const disconnectBtn = document.getElementById('googleDisconnectBtn');
   const backupBtn = document.getElementById('backupGoogleBtn');
   const restoreBtn = document.getElementById('restoreGoogleBtn');
+  const exportCsvBtn = document.getElementById('exportCsvBtn');
+  const downloadBackupBtn = document.getElementById('downloadBackupBtn');
+  const importBackupInput = document.getElementById('importBackupInput');
+  const clientIdInput = document.getElementById('settingGoogleClientId');
 
-  operatingDaysSelect.innerHTML = DAYS.map((day) => `<option value="${day.value}">${day.label}</option>`).join('');
+  let selectedDays = new Set([1, 2, 3, 4, 5, 6]);
 
-  function selectedValues(select) {
-    return [...select.options].filter((option) => option.selected).map((option) => Number(option.value));
+  function selectedOperatingDays() {
+    return [...selectedDays].sort((a, b) => a - b);
   }
 
-  function renderGoogleStatus(state) {
+  function renderDayPicker() {
+    operatingDaysPicker.innerHTML = DAYS.map((day) => `
+      <button
+        class="day-toggle${selectedDays.has(day.value) ? ' is-active' : ''}"
+        type="button"
+        data-day="${day.value}"
+        aria-pressed="${selectedDays.has(day.value) ? 'true' : 'false'}"
+      >
+        ${day.label}
+      </button>
+    `).join('');
+  }
+
+  function renderGoogleStatus(state, clientIdOverride = null) {
     const conn = state.settings.googleConnection;
-    if (!state.settings.googleClientId) {
-      statusEl.innerHTML = 'Google: Not configured. Add OAuth Client ID first.';
+    const clientId = clientIdOverride === null ? state.settings.googleClientId : String(clientIdOverride || '').trim();
+    const env = authService.getEnvironmentStatus(clientId);
+    statusEl.dataset.tone = env.supported ? '' : 'warning';
+
+    if (!clientId) {
+      statusEl.textContent = 'Google: Not configured. Add OAuth Client ID first.';
+      return;
+    }
+    if (!env.supported) {
+      statusEl.textContent = `Google: ${env.message}`;
       return;
     }
     if (!conn.connected) {
-      statusEl.innerHTML = 'Google: Configured but not connected.';
+      statusEl.textContent = 'Google: Configured but not connected.';
       return;
     }
 
@@ -78,11 +97,23 @@ export function initSettingsFeature({
     telemetryStatusEl.textContent = flags.length ? `Telemetry: ${flags.join(' | ')}` : 'Telemetry: Not configured';
   }
 
+  function syncGoogleButtonState(state, clientIdOverride = null) {
+    const clientId = clientIdOverride === null ? state.settings.googleClientId : String(clientIdOverride || '').trim();
+    const env = authService.getEnvironmentStatus(clientId);
+    const savedClientId = String(state.settings.googleClientId || '').trim();
+    const hasUnsavedClientId = clientIdOverride !== null && clientId !== savedClientId;
+    const connected = Boolean(state.settings.googleConnection?.connected);
+    connectBtn.disabled = !env.supported || hasUnsavedClientId;
+    disconnectBtn.disabled = !connected;
+    backupBtn.disabled = !env.supported || !connected;
+    restoreBtn.disabled = !env.supported || !connected;
+  }
+
   function render(state) {
     document.getElementById('settingBusinessName').value = state.settings.businessName || '';
     document.getElementById('settingCurrency').value = state.settings.currency || 'ZAR';
     document.getElementById('settingLoyaltyThreshold').value = String(state.settings.loyaltyThreshold || 10);
-    document.getElementById('settingGoogleClientId').value = state.settings.googleClientId || '';
+    clientIdInput.value = state.settings.googleClientId || '';
     document.getElementById('settingPosthogKey').value = state.settings.observability?.posthogKey || '';
     document.getElementById('settingPosthogHost').value = state.settings.observability?.posthogHost || 'https://app.posthog.com';
     document.getElementById('settingSentryDsn').value = state.settings.observability?.sentryDsn || '';
@@ -91,21 +122,32 @@ export function initSettingsFeature({
     document.getElementById('settingAssistantModel').value = state.settings.assistant?.model || '';
     document.getElementById('settingAssistantBaseUrl').value = state.settings.assistant?.baseUrl || '';
 
-    [...operatingDaysSelect.options].forEach((option) => {
-      option.selected = (state.settings.operatingDays || []).includes(Number(option.value));
-    });
-
+    selectedDays = new Set((state.settings.operatingDays || []).map((day) => Number(day)));
+    if (!selectedDays.size) selectedDays = new Set([1, 2, 3, 4, 5, 6]);
+    renderDayPicker();
     renderGoogleStatus(state);
     renderTelemetryStatus(state);
+    syncGoogleButtonState(state);
   }
+
+  operatingDaysPicker.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-day]');
+    if (!btn) return;
+    const value = Number(btn.dataset.day);
+    if (!Number.isInteger(value)) return;
+    if (selectedDays.has(value)) selectedDays.delete(value);
+    else selectedDays.add(value);
+    renderDayPicker();
+  });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const state = store.getState();
     const businessName = String(document.getElementById('settingBusinessName').value || '').trim();
     const currency = document.getElementById('settingCurrency').value;
     const loyaltyThreshold = Math.max(1, Number(document.getElementById('settingLoyaltyThreshold').value || 10));
-    const googleClientId = String(document.getElementById('settingGoogleClientId').value || '').trim();
-    const operatingDays = selectedValues(operatingDaysSelect);
+    const googleClientId = String(clientIdInput.value || '').trim();
+    const operatingDays = selectedOperatingDays();
 
     const observability = {
       posthogKey: String(document.getElementById('settingPosthogKey').value || '').trim(),
@@ -131,6 +173,7 @@ export function initSettingsFeature({
     }
 
     store.update((draft) => {
+      const previousClientId = String(draft.settings.googleClientId || '').trim();
       draft.settings.businessName = businessName;
       draft.settings.currency = currency;
       draft.settings.loyaltyThreshold = loyaltyThreshold;
@@ -138,7 +181,8 @@ export function initSettingsFeature({
       draft.settings.operatingDays = operatingDays;
       draft.settings.observability = observability;
       draft.settings.assistant = assistantConfig;
-      if (!googleClientId) {
+
+      if (!googleClientId || googleClientId !== previousClientId) {
         draft.settings.googleConnection = {
           connected: false,
           email: '',
@@ -161,6 +205,13 @@ export function initSettingsFeature({
     toggleButtonBusy(connectBtn, true, 'Connecting...');
     telemetry.track('google_connect_attempt');
     try {
+      const typedClientId = String(clientIdInput.value || '').trim();
+      const savedClientId = String(store.getState().settings.googleClientId || '').trim();
+      if (typedClientId !== savedClientId) {
+        await modal.alert('Save Settings First', 'Save the Google OAuth Client ID before attempting to connect.');
+        return;
+      }
+
       const result = await authService.connectGoogle();
       if (!result.ok) {
         telemetry.track('google_connect_failed', { code: result.code || 'unknown' });
@@ -237,14 +288,26 @@ export function initSettingsFeature({
     }
   });
 
-  document.getElementById('downloadBackupBtn').addEventListener('click', () => {
+  downloadBackupBtn.addEventListener('click', async () => {
     const payload = exportBackup(store.getState());
-    downloadBlob(`creamtrack-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), 'application/json');
-    telemetry.track('backup_downloaded');
-    showToast('Backup downloaded.');
+    const result = await exportTextFile({
+      filename: `cathdel-creamy-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      content: JSON.stringify(payload, null, 2),
+      mime: 'application/json',
+      title: 'Backup JSON'
+    });
+
+    if (!result.ok) {
+      telemetry.track('backup_download_failed', { code: result.code || 'unknown' });
+      await modal.alert('Backup Export Not Completed', result.message || 'Unable to export backup in this environment.');
+      return;
+    }
+
+    telemetry.track('backup_downloaded', { method: result.method || 'unknown' });
+    showToast('Backup export has started.');
   });
 
-  document.getElementById('importBackupInput').addEventListener('change', async (event) => {
+  importBackupInput.addEventListener('change', async (event) => {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
 
@@ -270,10 +333,9 @@ export function initSettingsFeature({
     }
   });
 
-  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  exportCsvBtn.addEventListener('click', async () => {
     const state = store.getState();
-
-    const salesCsv = [
+    const salesRows = [
       ['id', 'type', 'date', 'amount', 'payment', 'qty', 'customerId', 'productId', 'reason', 'notes'],
       ...state.entries.map((entry) => [
         entry.id,
@@ -287,17 +349,43 @@ export function initSettingsFeature({
         entry.reasonKey === 'other' ? entry.reasonText : entry.reasonKey,
         entry.notes
       ])
-    ].map((row) => row.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    ];
 
-    const customerCsv = [
+    const customerRows = [
       ['id', 'type', 'name', 'guardianName', 'grade', 'phone', 'qrId', 'walletId'],
       ...state.customers.map((customer) => [customer.id, customer.type, customer.name, customer.guardianName, customer.grade, customer.phone, customer.qrId, customer.walletId])
-    ].map((row) => row.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    ];
 
-    downloadBlob(`creamtrack-sales-${new Date().toISOString().slice(0, 10)}.csv`, salesCsv, 'text/csv;charset=utf-8');
-    downloadBlob(`creamtrack-customers-${new Date().toISOString().slice(0, 10)}.csv`, customerCsv, 'text/csv;charset=utf-8');
-    telemetry.track('settings_export_csv');
-    showToast('CSV exports downloaded.');
+    const text = [
+      '# SALES',
+      ...salesRows.map(csvRow),
+      '',
+      '# CUSTOMERS',
+      ...customerRows.map(csvRow)
+    ].join('\n');
+
+    const result = await exportTextFile({
+      filename: `cathdel-creamy-export-${new Date().toISOString().slice(0, 10)}.csv`,
+      content: text,
+      mime: 'text/csv;charset=utf-8',
+      title: 'Cathdel Creamy CSV Export'
+    });
+
+    if (!result.ok) {
+      telemetry.track('settings_export_csv_failed', { code: result.code || 'unknown' });
+      await modal.alert('CSV Export Not Completed', result.message || 'Unable to export CSV in this environment.');
+      return;
+    }
+
+    telemetry.track('settings_export_csv', { method: result.method || 'unknown' });
+    showToast('CSV export has started.');
+  });
+
+  clientIdInput.addEventListener('input', () => {
+    const nextClientId = String(clientIdInput.value || '').trim();
+    const state = store.getState();
+    renderGoogleStatus(state, nextClientId);
+    syncGoogleButtonState(state, nextClientId);
   });
 
   return { render };

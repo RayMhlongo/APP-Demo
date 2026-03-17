@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'creamtrack-v19';
+const CACHE_VERSION = 'cathdel-v20';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const OFFLINE_FALLBACK_URL = new URL('./index.html', self.location.href).toString();
@@ -10,7 +10,6 @@ const APP_SHELL = [
   './manifest.json',
   './service-worker.js',
   './client-logo.png',
-  './LOGOO.jpeg',
   './icons/icon-72x72.png',
   './icons/icon-96x96.png',
   './icons/icon-128x128.png',
@@ -33,6 +32,7 @@ const APP_SHELL = [
   './src/services/assistant-engine.js',
   './src/services/analytics.js',
   './src/services/auth.js',
+  './src/services/file-actions.js',
   './src/services/models.js',
   './src/services/reports.js',
   './src/services/storage.js',

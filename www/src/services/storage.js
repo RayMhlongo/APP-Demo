@@ -2,7 +2,8 @@ import { todayISO } from '../utils/date.js';
 import { uid } from '../utils/id.js';
 import { NO_SALE_REASON_OPTIONS } from './models.js';
 
-const APP_KEY = 'creamtrack.vendor.v2';
+const APP_KEY = 'cathdel.creamy.v3';
+const LEGACY_KEYS = ['creamtrack.vendor.v2'];
 
 function sanitizeOperatingDays(days) {
   const list = Array.isArray(days) ? days.map((day) => Number(day)).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6) : [];
@@ -10,14 +11,11 @@ function sanitizeOperatingDays(days) {
 }
 
 function defaultState() {
-  const walletA = { id: 'wallet-001', label: 'Mhlongo Family', balance: 0, memberIds: ['cust-001', 'cust-002'] };
-  const walletB = { id: 'wallet-002', label: 'Walk-in Adults', balance: 0, memberIds: ['cust-003'] };
-
   return {
-    version: 3,
+    version: 4,
     lastSavedAt: new Date().toISOString(),
     settings: {
-      businessName: 'CreamTrack Vendor',
+      businessName: 'Cathdel Creamy',
       valueProp: 'Track sales, loyalty, and missed trading days in one place.',
       currency: 'ZAR',
       operatingDays: [1, 2, 3, 4, 5, 6],
@@ -45,15 +43,11 @@ function defaultState() {
       { id: 'prd-002', name: 'Choco Dip', price: 12, stock: 35 },
       { id: 'prd-003', name: 'Family Tub', price: 85, stock: 12 }
     ],
-    customers: [
-      { id: 'cust-001', type: 'child', name: 'Akami', guardianName: 'Akami Mom', grade: '5', phone: '+27 72 340 8365', qrId: 'CT-CUST-001', walletId: walletA.id },
-      { id: 'cust-002', type: 'child', name: 'Damian', guardianName: 'Damian Mom', grade: '3', phone: '+27 76 822 4643', qrId: 'CT-CUST-002', walletId: walletA.id },
-      { id: 'cust-003', type: 'adult', name: 'Mr Dube', guardianName: '', grade: '', phone: '+27 81 123 7788', qrId: 'CT-CUST-003', walletId: walletB.id }
-    ],
-    wallets: [walletA, walletB],
+    customers: [],
+    wallets: [],
     entries: [],
     activity: [
-      { id: uid('act'), type: 'system', message: 'App initialized', at: new Date().toISOString() }
+      { id: uid('act'), type: 'system', message: 'Cathdel Creamy initialized', at: new Date().toISOString() }
     ]
   };
 }
@@ -121,13 +115,13 @@ function sanitizeCustomers(customers) {
   const list = Array.isArray(customers) ? customers : [];
   return list
     .map((customer, index) => ({
-      id: String(customer.id || `cust-${String(index + 1).padStart(3, '0')}`),
+      id: String(customer.id || `cust-${String(index + 1).padStart(3, '0')}`).trim(),
       type: String(customer.type || '').toLowerCase() === 'adult' ? 'adult' : 'child',
       name: String(customer.name || '').trim(),
       guardianName: String(customer.guardianName || '').trim(),
       grade: String(customer.grade || '').replace(/\D/g, ''),
       phone: String(customer.phone || '').trim(),
-      qrId: String(customer.qrId || `CT-CUST-${String(index + 1).padStart(3, '0')}`).trim(),
+      qrId: String(customer.qrId || `CC-CUST-${String(index + 1).padStart(3, '0')}`).trim(),
       walletId: String(customer.walletId || '').trim()
     }))
     .filter((customer) => customer.name);
@@ -139,7 +133,7 @@ function sanitizeWallets(wallets) {
     const id = String(wallet.id || `wallet-${String(index + 1).padStart(3, '0')}`).trim();
     map.set(id, {
       id,
-      label: String(wallet.label || 'Family Wallet').trim() || 'Family Wallet',
+      label: String(wallet.label || 'Shared Wallet').trim() || 'Shared Wallet',
       balance: Math.max(0, Number(wallet.balance || 0)),
       memberIds: Array.isArray(wallet.memberIds) ? [...new Set(wallet.memberIds.map((member) => String(member || '').trim()).filter(Boolean))] : []
     });
@@ -153,7 +147,7 @@ function sanitizeEntries(entries) {
       const type = entry.type === 'no_sale' ? 'no_sale' : 'sale';
       const reasonKey = String(entry.reasonKey || '').trim();
       return {
-        id: String(entry.id || uid('entry')),
+        id: String(entry.id || uid('entry')).trim(),
         type,
         date: String(entry.date || todayISO()).slice(0, 10),
         amount: type === 'sale' ? Math.max(0, Number(entry.amount || 0)) : 0,
@@ -179,8 +173,8 @@ function sanitizeActivity(activity, baseActivity) {
   const list = Array.isArray(activity) ? activity : baseActivity;
   return list
     .map((item, index) => ({
-      id: String(item.id || `act-${String(index + 1).padStart(4, '0')}`),
-      type: String(item.type || 'info'),
+      id: String(item.id || `act-${String(index + 1).padStart(4, '0')}`).trim(),
+      type: String(item.type || 'info').trim(),
       message: String(item.message || '').trim(),
       at: String(item.at || new Date().toISOString())
     }))
@@ -195,7 +189,7 @@ function reconcileWalletMembers(customers, walletsById) {
       if (!walletsById.has(fallbackId)) {
         walletsById.set(fallbackId, {
           id: fallbackId,
-          label: `${customer.guardianName || customer.name} Wallet`,
+          label: `${customer.name} Wallet`,
           balance: 0,
           memberIds: []
         });
@@ -211,18 +205,31 @@ function reconcileWalletMembers(customers, walletsById) {
   });
 }
 
+function hasLegacyPersonalSeed(customers, entries) {
+  if (!Array.isArray(customers) || customers.length !== 3) return false;
+  if (Array.isArray(entries) && entries.length > 0) return false;
+  const names = customers.map((customer) => String(customer.name || '').trim().toLowerCase()).sort().join('|');
+  return names === 'akami|damian|mr dube';
+}
+
 function sanitize(state) {
   const base = defaultState();
   const settings = sanitizeSettings(state?.settings, base.settings);
   const products = sanitizeProducts(state?.products, base.products);
+  const entries = sanitizeEntries(state?.entries);
   const customers = sanitizeCustomers(state?.customers);
   const walletsById = sanitizeWallets(state?.wallets);
+
+  if (hasLegacyPersonalSeed(customers, entries)) {
+    customers.length = 0;
+    walletsById.clear();
+  }
+
   reconcileWalletMembers(customers, walletsById);
-  const entries = sanitizeEntries(state?.entries);
   const activity = sanitizeActivity(state?.activity, base.activity);
 
   return {
-    version: 3,
+    version: 4,
     lastSavedAt: String(state?.lastSavedAt || new Date().toISOString()),
     settings,
     products,
@@ -233,11 +240,29 @@ function sanitize(state) {
   };
 }
 
+function readStoredState() {
+  try {
+    const nextRaw = localStorage.getItem(APP_KEY);
+    if (nextRaw) return { key: APP_KEY, raw: nextRaw };
+    for (const key of LEGACY_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw) return { key, raw };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export function loadState() {
   try {
-    const raw = localStorage.getItem(APP_KEY);
-    if (!raw) return defaultState();
-    return sanitize(JSON.parse(raw));
+    const found = readStoredState();
+    if (!found) return defaultState();
+    const clean = sanitize(JSON.parse(found.raw));
+    if (found.key !== APP_KEY) {
+      localStorage.setItem(APP_KEY, JSON.stringify(clean));
+    }
+    return clean;
   } catch {
     return defaultState();
   }
@@ -253,14 +278,21 @@ export function saveState(state) {
 export function resetState() {
   const base = defaultState();
   localStorage.setItem(APP_KEY, JSON.stringify(base));
+  LEGACY_KEYS.forEach((key) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Ignore legacy key cleanup errors.
+    }
+  });
   return base;
 }
 
 export function exportBackup(state) {
   return {
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
-    app: 'CreamTrack Vendor',
+    app: 'Cathdel Creamy',
     state: sanitize(state)
   };
 }

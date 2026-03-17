@@ -6,21 +6,18 @@ import {
   buildSummaryCsv,
   resolveReportRange
 } from '../../services/reports.js';
+import { exportTextFile, printSupportStatus } from '../../services/file-actions.js';
 import { validateReportRange } from '../../services/validation.js';
 import { formatMoney } from '../../utils/format.js';
 
-function downloadBlob(filename, text, mime = 'text/plain;charset=utf-8') {
-  const blob = new Blob([text], { type: mime });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(link.href);
+function toggleBusy(button, busy, label = 'Working...') {
+  if (!button) return;
+  if (!button.dataset.originalLabel) button.dataset.originalLabel = button.textContent;
+  button.disabled = busy;
+  button.textContent = busy ? label : button.dataset.originalLabel;
 }
 
-export function initReportsFeature({ store, showToast, telemetry }) {
+export function initReportsFeature({ store, showToast, telemetry, modal }) {
   const form = document.getElementById('reportForm');
   const fromInput = document.getElementById('reportFromDate');
   const toInput = document.getElementById('reportToDate');
@@ -89,42 +86,91 @@ export function initReportsFeature({ store, showToast, telemetry }) {
     });
   }
 
+  async function runCsvExport({ button, filename, content, successEvent, failEvent, title, successMessage }) {
+    toggleBusy(button, true, 'Preparing...');
+    try {
+      const result = await exportTextFile({
+        filename,
+        content,
+        mime: 'text/csv;charset=utf-8',
+        title
+      });
+
+      if (!result.ok) {
+        telemetry.track(failEvent, { code: result.code || 'unknown' });
+        await modal.alert('Export Not Completed', result.message || 'The export could not be completed on this device.');
+        return;
+      }
+
+      telemetry.track(successEvent, { method: result.method || 'unknown' });
+      showToast(successMessage);
+    } finally {
+      toggleBusy(button, false);
+    }
+  }
+
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     generate();
   });
 
-  exportSalesBtn.addEventListener('click', () => {
+  exportSalesBtn.addEventListener('click', async () => {
     const state = store.getState();
     ensureRangeDefaults(state);
     const csv = buildFilteredSalesCsv(state, getRange());
-    downloadBlob(`creamtrack-sales-${dateStamp()}.csv`, csv, 'text/csv;charset=utf-8');
-    showToast('Filtered sales CSV exported.');
-    telemetry.track('report_export_sales_csv');
+    await runCsvExport({
+      button: exportSalesBtn,
+      filename: `cathdel-creamy-sales-${dateStamp()}.csv`,
+      content: csv,
+      successEvent: 'report_export_sales_csv',
+      failEvent: 'report_export_sales_csv_failed',
+      title: 'Sales CSV',
+      successMessage: 'Sales CSV export has started.'
+    });
   });
 
-  exportNoSaleBtn.addEventListener('click', () => {
+  exportNoSaleBtn.addEventListener('click', async () => {
     const state = store.getState();
     ensureRangeDefaults(state);
     const csv = buildNoSaleCsv(state, getRange());
-    downloadBlob(`creamtrack-nosale-${dateStamp()}.csv`, csv, 'text/csv;charset=utf-8');
-    showToast('No-sale CSV exported.');
-    telemetry.track('report_export_nosale_csv');
+    await runCsvExport({
+      button: exportNoSaleBtn,
+      filename: `cathdel-creamy-nosale-${dateStamp()}.csv`,
+      content: csv,
+      successEvent: 'report_export_nosale_csv',
+      failEvent: 'report_export_nosale_csv_failed',
+      title: 'No-Sale CSV',
+      successMessage: 'No-sale CSV export has started.'
+    });
   });
 
-  exportSummaryBtn.addEventListener('click', () => {
+  exportSummaryBtn.addEventListener('click', async () => {
     const state = store.getState();
     ensureRangeDefaults(state);
     const summary = lastSummary || buildReportSummary(state, getRange());
     const csv = buildSummaryCsv(summary, state.settings.currency || 'ZAR');
-    downloadBlob(`creamtrack-summary-${dateStamp()}.csv`, csv, 'text/csv;charset=utf-8');
-    showToast('Summary CSV exported.');
-    telemetry.track('report_export_summary_csv');
+    await runCsvExport({
+      button: exportSummaryBtn,
+      filename: `cathdel-creamy-summary-${dateStamp()}.csv`,
+      content: csv,
+      successEvent: 'report_export_summary_csv',
+      failEvent: 'report_export_summary_csv_failed',
+      title: 'Summary CSV',
+      successMessage: 'Summary CSV export has started.'
+    });
   });
 
-  printBtn.addEventListener('click', () => {
-    telemetry.track('report_print');
+  printBtn.addEventListener('click', async () => {
+    const support = printSupportStatus();
+    if (!support.supported) {
+      telemetry.track('report_print_failed', { code: support.code });
+      await modal.alert('Print Unavailable', support.message);
+      return;
+    }
+
+    telemetry.track('report_print_requested');
     window.print();
+    showToast('Print dialog requested.');
   });
 
   return {

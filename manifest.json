@@ -1,7 +1,7 @@
 {
-  "id": "./?app=creamtrack-vendor",
-  "name": "CreamTrack Vendor",
-  "short_name": "CreamTrack",
+  "id": "./?app=cathdel-creamy",
+  "name": "Cathdel Creamy",
+  "short_name": "Cathdel Creamy",
   "description": "Mobile-first business manager for sales, loyalty, missed-day logs, and actionable insights.",
   "start_url": "./index.html?source=pwa",
   "display": "standalone",
@@ -9,8 +9,8 @@
     "standalone",
     "minimal-ui"
   ],
-  "background_color": "#f3f7f8",
-  "theme_color": "#0f766e",
+  "background_color": "#99c9cd",
+  "theme_color": "#35a9c2",
   "orientation": "portrait",
   "scope": "./",
   "prefer_related_applications": false,

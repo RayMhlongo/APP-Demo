@@ -1,5 +1,5 @@
-const POSTHOG_SCRIPT_ID = 'creamtrack-posthog-sdk';
-const SENTRY_SCRIPT_ID = 'creamtrack-sentry-sdk';
+const POSTHOG_SCRIPT_ID = 'cathdel-creamy-posthog-sdk';
+const SENTRY_SCRIPT_ID = 'cathdel-creamy-sentry-sdk';
 
 function loadScript(src, id) {
   return new Promise((resolve, reject) => {
@@ -65,7 +65,7 @@ export function createTelemetryService({ getState, appVersion = 'dev' }) {
         window.Sentry.init({
           dsn: config.sentryDsn,
           environment: 'production',
-          release: `creamtrack@${appVersion}`,
+          release: `cathdel-creamy@${appVersion}`,
           tracesSampleRate: 0.05
         });
         sentryReady = true;
@@ -89,7 +89,7 @@ export function createTelemetryService({ getState, appVersion = 'dev' }) {
     safeCall(() => {
       if (!posthogReady || !window.posthog || !window.posthog.capture) return;
       window.posthog.capture(event, {
-        app: 'CreamTrack Vendor',
+        app: 'Cathdel Creamy',
         app_version: appVersion,
         business_name: state.settings.businessName || '',
         ...properties

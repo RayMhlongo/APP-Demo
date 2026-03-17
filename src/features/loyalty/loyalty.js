@@ -4,7 +4,7 @@ import { uid } from '../../utils/id.js';
 import { validateCustomerInput } from '../../services/validation.js';
 
 function randomQrId() {
-  return `CT-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+  return `CC-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
 }
 
 export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemetry }) {
@@ -24,8 +24,10 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemet
   const customerSearch = document.getElementById('customerSearch');
   const qrPreview = document.getElementById('qrPreview');
   const scanRegion = document.getElementById('scanRegion');
+  const clearQrBtn = document.getElementById('clearQrBtn');
 
   let scanner = null;
+  let scannerActive = false;
   let scannedQr = '';
   let editingCustomerId = '';
 
@@ -145,11 +147,34 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemet
     const rendered = renderQrCode(holder, code, {
       width: 180,
       height: 180,
-      colorDark: '#0f766e'
+      colorDark: '#2b8ea4'
     });
     if (!rendered.ok) {
       holder.innerHTML = `<div class="customer-meta">QR generator unavailable.<br>ID: ${escapeHtml(code)}</div>`;
     }
+  }
+
+  async function stopScanner() {
+    if (!scanner || !scannerActive) {
+      scanRegion.hidden = true;
+      return;
+    }
+    try {
+      await scanner.stop();
+    } catch {
+      // Ignore scanner stop errors when scanner is already inactive.
+    } finally {
+      scannerActive = false;
+      scanRegion.hidden = true;
+    }
+  }
+
+  async function clearQrState({ silent = false } = {}) {
+    await stopScanner();
+    scannedQr = '';
+    renderQr('', '');
+    telemetry.track('qr_cleared');
+    if (!silent) showToast('QR tools cleared.');
   }
 
   async function promptTopUp(customerId) {
@@ -320,6 +345,7 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemet
     const customer = state.customers.find((item) => item.id === customerId);
     if (!customer) return;
 
+    stopScanner();
     setEditMode(customer.id);
     typeInput.value = customer.type;
     updateTypeVisibility();
@@ -351,20 +377,23 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemet
       return;
     }
 
+    await stopScanner();
+    scannedQr = '';
     scanRegion.hidden = false;
+    qrPreview.innerHTML = '<div class="customer-meta">Scanner active. Point camera at a QR code.</div>';
 
     try {
+      scannerActive = true;
       await scanner.start(
         async (decodedText) => {
-          await scanner.stop();
-          scanRegion.hidden = true;
+          await stopScanner();
           const state = store.getState();
           const customer = state.customers.find((item) => item.qrId === decodedText);
+          scannedQr = decodedText;
           if (customer) {
             renderQr(customer.qrId, `QR belongs to ${customer.name}`);
             showToast(`Scan success: ${customer.name}`);
           } else {
-            scannedQr = decodedText;
             renderQr(decodedText, 'Unknown QR. Save customer to assign it.');
             showToast('QR scanned. Complete customer form to assign it.');
           }
@@ -374,14 +403,16 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemet
       );
     } catch (error) {
       showToast('Unable to start scanner. Camera permission may be blocked.');
+      scannerActive = false;
       scanRegion.hidden = true;
       telemetry.track('qr_scan_failed', { reason: 'camera_error' });
       telemetry.captureError(error, { area: 'qr_scan' });
     }
   }
 
-  document.getElementById('generateBlankQrBtn').addEventListener('click', () => {
-    scannedQr = `CT-BLANK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+  document.getElementById('generateBlankQrBtn').addEventListener('click', async () => {
+    await stopScanner();
+    scannedQr = `CC-BLANK-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
     renderQr(scannedQr, 'Blank QR generated');
     telemetry.track('qr_generated_blank');
     showToast('Blank QR generated.');
@@ -389,6 +420,10 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemet
 
   document.getElementById('startScanBtn').addEventListener('click', () => {
     startScanner();
+  });
+
+  clearQrBtn.addEventListener('click', async () => {
+    await clearQrState();
   });
 
   typeInput.addEventListener('change', updateTypeVisibility);
@@ -408,7 +443,11 @@ export function initLoyaltyFeature({ store, showToast, modal, renderAll, telemet
 
     if (qrBtn) {
       const customer = store.getState().customers.find((item) => item.id === qrBtn.dataset.qrId);
-      if (customer) renderQr(customer.qrId, `${customer.name} QR`);
+      if (customer) {
+        stopScanner();
+        scannedQr = customer.qrId;
+        renderQr(customer.qrId, `${customer.name} QR`);
+      }
     }
     if (topupBtn) promptTopUp(topupBtn.dataset.topupId);
     if (editBtn) editCustomer(editBtn.dataset.editId);

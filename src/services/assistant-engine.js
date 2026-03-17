@@ -1,4 +1,4 @@
-import { assistantReply, buildInsights, todaySales, weekSales } from './analytics.js';
+import { assistantReply, buildInsights, businessDayCoverage, reasonDistribution, todaySales, weekSales } from './analytics.js';
 
 function providerDefaults(provider) {
   if (provider === 'groq') {
@@ -19,6 +19,8 @@ function providerDefaults(provider) {
 function summarizeState(state) {
   const today = todaySales(state);
   const week = weekSales(state);
+  const coverage = businessDayCoverage(state);
+  const reasons = reasonDistribution(state);
   const insights = buildInsights(state).slice(0, 5);
   return {
     todaySalesTotal: today.total,
@@ -26,7 +28,10 @@ function summarizeState(state) {
     weekSalesTotal: week.total,
     weekTx: week.entries.length,
     noSaleLogs: state.entries.filter((entry) => entry.type === 'no_sale').length,
+    noSaleReasonDistribution: reasons,
+    operatingCoverage: coverage,
     customerCount: state.customers.length,
+    walletCount: state.wallets.length,
     topInsights: insights
   };
 }
@@ -55,7 +60,7 @@ export function createAssistantEngine({ getState, telemetry }) {
 
     const summary = summarizeState(state);
     const systemPrompt = [
-      'You are a practical small-business assistant for an ice-cream vendor.',
+      'You are a practical business assistant for Cathdel Creamy (ice-cream vendor).',
       'Use only the given app data summary. Do not invent numbers.',
       'Keep answers concise, actionable, and owner-friendly.',
       'When uncertain, say what data is missing.'

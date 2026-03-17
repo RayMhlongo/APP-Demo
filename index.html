@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>CreamTrack Vendor | Mobile Business Manager</title>
+  <title>Cathdel Creamy</title>
   <meta name="description" content="Track sales, missed trading days, loyalty, and insights in one installable mobile app." />
-  <meta name="theme-color" content="#0f766e" />
+  <meta name="theme-color" content="#35a9c2" />
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" href="./icons/icon-192x192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -28,17 +28,20 @@
 
   <div class="app-shell" id="appShell">
     <div class="splash" id="splashScreen" aria-live="polite">
-      <div class="splash-card">
-        <p class="kicker">CreamTrack Vendor</p>
-        <h1>Run your stall like a real business.</h1>
-        <p>Track sales, loyalty, and missed trading days in one place.</p>
+      <div class="splash-logo-wrap" aria-label="Cathdel Creamy">
+        <img src="./client-logo.png" alt="Cathdel Creamy logo" />
       </div>
     </div>
 
     <header class="topbar">
-      <div>
-        <p class="brand-eyebrow" id="brandEyebrow">Small Business Console</p>
-        <h1 class="brand-title" id="businessNameHeader">CreamTrack Vendor</h1>
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">
+          <img src="./client-logo.png" alt="" />
+        </div>
+        <div>
+        <p class="brand-eyebrow" id="brandEyebrow">Track sales, loyalty, and missed trading days in one place.</p>
+          <h1 class="brand-title" id="businessNameHeader">Cathdel Creamy</h1>
+        </div>
       </div>
       <div class="topbar-actions">
         <button class="chip" id="syncChip" type="button" aria-label="Sync status">Sync: Local</button>
@@ -296,6 +299,7 @@
           <div class="qr-tools">
             <button class="btn" id="generateBlankQrBtn" type="button">Generate Blank QR</button>
             <button class="btn" id="startScanBtn" type="button">Scan QR</button>
+            <button class="btn" id="clearQrBtn" type="button">Clear QR</button>
           </div>
           <div id="qrPreview" class="qr-preview"></div>
           <div id="scanRegion" class="scan-region" hidden></div>
@@ -345,9 +349,10 @@
             <label>Loyalty Threshold (visits)
               <input type="number" id="settingLoyaltyThreshold" min="1" step="1" />
             </label>
-            <label>Operating Days
-              <select id="settingOperatingDays" multiple size="7"></select>
-            </label>
+            <fieldset class="full day-picker">
+              <legend>Operating Days</legend>
+              <div id="operatingDaysPicker" class="day-picker-grid"></div>
+            </fieldset>
             <label>Google OAuth Client ID
               <input type="text" id="settingGoogleClientId" placeholder="xxxx.apps.googleusercontent.com" />
             </label>
