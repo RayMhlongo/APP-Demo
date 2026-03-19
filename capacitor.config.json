@@ -2,9 +2,5 @@
   "appId": "com.cathdelcreamy.demo",
   "appName": "Cathdel Creamy",
   "webDir": "www",
-  "bundledWebRuntime": false,
-  "server": {
-    "url": "https://raymhlongo.github.io/APP-Demo/",
-    "cleartext": false
-  }
+  "bundledWebRuntime": false
 }

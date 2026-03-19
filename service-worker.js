@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'cathdel-v20';
+const CACHE_VERSION = 'cathdel-v21';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const OFFLINE_FALLBACK_URL = new URL('./index.html', self.location.href).toString();
@@ -18,6 +18,8 @@ const APP_SHELL = [
   './icons/icon-192x192.png',
   './icons/icon-384x384.png',
   './icons/icon-512x512.png',
+  './vendor/qrcode.min.js',
+  './vendor/html5-qrcode.min.js',
   './src/main.js',
   './src/components/modal.js',
   './src/components/nav.js',
@@ -50,9 +52,7 @@ const APP_SHELL = [
 const THIRD_PARTY_ASSETS = [
   'https://accounts.google.com/gsi/client',
   'https://cdn.jsdelivr.net/npm/posthog-js@1.228.0/dist/posthog.js',
-  'https://browser.sentry-cdn.com/8.33.0/bundle.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  'https://browser.sentry-cdn.com/8.33.0/bundle.min.js'
 ];
 
 self.addEventListener('install', (event) => {

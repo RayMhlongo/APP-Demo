@@ -73,6 +73,12 @@ npm run apk:debug
 
 If local Android SDK is not configured, use the GitHub Actions release workflow to build APK automatically.
 
+## Offline Behavior
+
+- The APK uses bundled local web assets (not a remote URL), so core business flows work without internet.
+- QR libraries are bundled locally for offline QR generation/scanning support.
+- Google backup/auth and remote AI features still require internet by design.
+
 ## Google Auth and Backup Setup
 
 Google features require configuration and environment support.
