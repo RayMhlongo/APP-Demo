@@ -358,13 +358,15 @@
               <input type="text" id="settingGoogleClientId" placeholder="xxxx.apps.googleusercontent.com" />
             </label>
             <div class="full settings-meta" id="googleStatus">Google: Not connected</div>
+            <div class="full settings-meta" id="googleBackupStatus">Cloud backup: Sign in to inspect Google Drive backup status.</div>
+            <div class="full settings-meta" id="backupScopeStatus">Backup includes business settings, products, customers, shared wallets, sales/no-sale logs, and recent activity.</div>
             <div class="full button-row">
               <button class="btn" type="button" id="googleConnectBtn">Connect Google</button>
               <button class="btn" type="button" id="googleDisconnectBtn">Disconnect</button>
             </div>
             <div class="full button-row">
-              <button class="btn" type="button" id="backupGoogleBtn">Backup to Google</button>
-              <button class="btn" type="button" id="restoreGoogleBtn">Restore from Google</button>
+              <button class="btn" type="button" id="backupGoogleBtn">Backup Now</button>
+              <button class="btn" type="button" id="restoreGoogleBtn">Restore to This Phone</button>
             </div>
             <div class="full button-row">
               <button class="btn" type="button" id="exportCsvBtn">Export CSV</button>
@@ -433,6 +435,7 @@
           <ul class="help-list">
             <li>Use Dashboard to check business health quickly.</li>
             <li>Log no-sale days so reports stay accurate.</li>
+            <li>Connect the client Google account, then use Backup Now before switching phones.</li>
             <li>Use backup options before switching phones.</li>
           </ul>
         </article>

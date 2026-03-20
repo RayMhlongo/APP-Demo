@@ -222,6 +222,16 @@ function bootstrap() {
   renderAll();
   refreshInstallButton();
 
+  authService.resumePendingGoogleConnection().then((result) => {
+    if (!result?.ok) return;
+    telemetry.track('google_connect_resumed');
+    store.addActivity('Google account connected after browser return', 'auth');
+    renderAll();
+    toast(`${result.message}.`);
+  }).catch((error) => {
+    telemetry.captureError(error, { area: 'auth_resume' });
+  });
+
   setTimeout(() => {
     if (splash) splash.classList.add('is-hidden');
   }, 900);

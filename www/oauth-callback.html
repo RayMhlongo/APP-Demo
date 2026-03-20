@@ -42,11 +42,18 @@
     (function () {
       const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
       const params = new URLSearchParams(hash);
-      const appUrl = new URL('com.cathdelcreamy.demo://oauth-callback');
+      const appUrl = new URL('cathdelcreamy://oauth-callback');
       ['access_token', 'token_type', 'expires_in', 'scope', 'state', 'error', 'error_description'].forEach((key) => {
         const value = params.get(key);
         if (value) appUrl.searchParams.set(key, value);
       });
+
+      const intentUrl = new URL('intent://oauth-callback');
+      ['access_token', 'token_type', 'expires_in', 'scope', 'state', 'error', 'error_description'].forEach((key) => {
+        const value = params.get(key);
+        if (value) intentUrl.searchParams.set(key, value);
+      });
+      intentUrl.hash = '#Intent;scheme=cathdelcreamy;package=com.cathdelcreamy.demo;end';
 
       const statusEl = document.getElementById('status');
       if (params.get('error')) {
@@ -59,9 +66,15 @@
       window.location.replace(target);
 
       setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.href = intentUrl.toString();
+        }
+      }, 700);
+
+      setTimeout(() => {
         const fallback = document.getElementById('fallback');
         const openLink = document.getElementById('openLink');
-        openLink.href = target;
+        openLink.href = intentUrl.toString();
         fallback.style.display = 'block';
       }, 1200);
     })();

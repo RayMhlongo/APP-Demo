@@ -12,7 +12,7 @@ function sanitizeOperatingDays(days) {
 
 function defaultState() {
   return {
-    version: 4,
+    version: 5,
     lastSavedAt: new Date().toISOString(),
     settings: {
       businessName: 'Cathdel Creamy',
@@ -24,7 +24,12 @@ function defaultState() {
       googleConnection: {
         connected: false,
         email: '',
-        connectedAt: ''
+        connectedAt: '',
+        backupExists: false,
+        backupModifiedAt: '',
+        backupSummary: '',
+        lastBackupAt: '',
+        lastRestoreAt: ''
       },
       observability: {
         posthogKey: '',
@@ -80,7 +85,12 @@ function sanitizeSettings(rawSettings, baseSettings) {
   settings.googleConnection = {
     connected: Boolean(settings.googleConnection.connected),
     email: String(settings.googleConnection.email || '').trim(),
-    connectedAt: String(settings.googleConnection.connectedAt || '').trim()
+    connectedAt: String(settings.googleConnection.connectedAt || '').trim(),
+    backupExists: Boolean(settings.googleConnection.backupExists),
+    backupModifiedAt: String(settings.googleConnection.backupModifiedAt || '').trim(),
+    backupSummary: String(settings.googleConnection.backupSummary || '').trim(),
+    lastBackupAt: String(settings.googleConnection.lastBackupAt || '').trim(),
+    lastRestoreAt: String(settings.googleConnection.lastRestoreAt || '').trim()
   };
   settings.observability = {
     posthogKey: String(settings.observability.posthogKey || '').trim(),
@@ -229,7 +239,7 @@ function sanitize(state) {
   const activity = sanitizeActivity(state?.activity, base.activity);
 
   return {
-    version: 4,
+    version: 5,
     lastSavedAt: String(state?.lastSavedAt || new Date().toISOString()),
     settings,
     products,
@@ -289,11 +299,23 @@ export function resetState() {
 }
 
 export function exportBackup(state) {
+  const clean = sanitize(state);
+  clean.settings.googleConnection = {
+    ...clean.settings.googleConnection,
+    connected: false,
+    email: '',
+    connectedAt: '',
+    backupExists: false,
+    backupModifiedAt: '',
+    backupSummary: '',
+    lastBackupAt: '',
+    lastRestoreAt: ''
+  };
   return {
-    version: 4,
+    version: 5,
     exportedAt: new Date().toISOString(),
     app: 'Cathdel Creamy',
-    state: sanitize(state)
+    state: clean
   };
 }
 

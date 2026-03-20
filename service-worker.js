@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'cathdel-v22';
+const CACHE_VERSION = 'cathdel-v25';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const OFFLINE_FALLBACK_URL = new URL('./index.html', self.location.href).toString();

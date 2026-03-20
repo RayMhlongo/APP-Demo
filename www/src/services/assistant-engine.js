@@ -1,4 +1,13 @@
-import { assistantReply, buildInsights, businessDayCoverage, reasonDistribution, todaySales, weekSales } from './analytics.js';
+import {
+  assistantReply,
+  buildInsights,
+  businessDayCoverage,
+  businessRecommendations,
+  reasonDistribution,
+  todaySales,
+  weekSales,
+  weekdayPerformance
+} from './analytics.js';
 
 function providerDefaults(provider) {
   if (provider === 'groq') {
@@ -22,6 +31,15 @@ function summarizeState(state) {
   const coverage = businessDayCoverage(state);
   const reasons = reasonDistribution(state);
   const insights = buildInsights(state).slice(0, 5);
+  const recommendations = businessRecommendations(state).slice(0, 3);
+  const weekdays = weekdayPerformance(state).map((day) => ({
+    day: day.fullLabel,
+    total: day.total,
+    saleEntries: day.saleEntries,
+    saleDays: day.saleDays,
+    noSaleEntries: day.noSaleEntries,
+    topReason: day.topReason ? day.topReason[0] : ''
+  }));
   return {
     todaySalesTotal: today.total,
     todayTx: today.entries.length,
@@ -32,7 +50,9 @@ function summarizeState(state) {
     operatingCoverage: coverage,
     customerCount: state.customers.length,
     walletCount: state.wallets.length,
-    topInsights: insights
+    topInsights: insights,
+    recommendedActions: recommendations,
+    weekdayPerformance: weekdays
   };
 }
 
@@ -63,6 +83,7 @@ export function createAssistantEngine({ getState, telemetry }) {
       'You are a practical business assistant for Cathdel Creamy (ice-cream vendor).',
       'Use only the given app data summary. Do not invent numbers.',
       'Keep answers concise, actionable, and owner-friendly.',
+      'If the user asks for advice, combine the data with practical small-business suggestions.',
       'When uncertain, say what data is missing.'
     ].join(' ');
 

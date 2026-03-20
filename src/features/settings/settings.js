@@ -37,6 +37,7 @@ export function initSettingsFeature({
   const form = document.getElementById('settingsForm');
   const operatingDaysPicker = document.getElementById('operatingDaysPicker');
   const statusEl = document.getElementById('googleStatus');
+  const backupStatusEl = document.getElementById('googleBackupStatus');
   const telemetryStatusEl = document.getElementById('telemetryStatus');
   const connectBtn = document.getElementById('googleConnectBtn');
   const disconnectBtn = document.getElementById('googleDisconnectBtn');
@@ -81,7 +82,7 @@ export function initSettingsFeature({
       return;
     }
     if (env.redirectUri && !conn.connected) {
-      statusEl.innerHTML = `Google: Ready for native browser sign-in. Configure OAuth redirect URI as <strong>${escapeHtml(env.redirectUri)}</strong>.`;
+      statusEl.innerHTML = `Google: Ready for Android browser sign-in. Configure OAuth redirect URI as <strong>${escapeHtml(env.redirectUri)}</strong>. The app return link is <strong>${escapeHtml(env.callbackUri || '')}</strong>.`;
       return;
     }
     if (!conn.connected) {
@@ -91,6 +92,28 @@ export function initSettingsFeature({
 
     const connectedAt = conn.connectedAt ? new Date(conn.connectedAt).toLocaleString('en-ZA') : 'unknown time';
     statusEl.innerHTML = `Google: Connected as <strong>${escapeHtml(conn.email || 'unknown')}</strong> on ${escapeHtml(connectedAt)}`;
+  }
+
+  function renderBackupStatus(state) {
+    const conn = state.settings.googleConnection || {};
+    const connected = Boolean(conn.connected);
+    if (!connected) {
+      backupStatusEl.textContent = 'Cloud backup: Sign in with Google to save this setup and restore it on another device.';
+      return;
+    }
+
+    if (!conn.backupExists) {
+      backupStatusEl.textContent = 'Cloud backup: No Google backup found yet. Use Backup Now after setting up this device.';
+      return;
+    }
+
+    const modifiedAt = conn.backupModifiedAt
+      ? new Date(conn.backupModifiedAt).toLocaleString('en-ZA')
+      : 'unknown time';
+    const restoredAt = conn.lastRestoreAt
+      ? ` Last restored on ${new Date(conn.lastRestoreAt).toLocaleString('en-ZA')}.`
+      : '';
+    backupStatusEl.innerHTML = `Cloud backup: <strong>${escapeHtml(conn.backupSummary || 'Backup found')}</strong>. Last cloud update ${escapeHtml(modifiedAt)}.${escapeHtml(restoredAt)}`;
   }
 
   function renderTelemetryStatus(state) {
@@ -130,8 +153,56 @@ export function initSettingsFeature({
     if (!selectedDays.size) selectedDays = new Set([1, 2, 3, 4, 5, 6]);
     renderDayPicker();
     renderGoogleStatus(state);
+    renderBackupStatus(state);
     renderTelemetryStatus(state);
     syncGoogleButtonState(state);
+  }
+
+  function hasMeaningfulLocalData(state) {
+    return Boolean(
+      (Array.isArray(state.customers) && state.customers.length) ||
+      (Array.isArray(state.wallets) && state.wallets.length) ||
+      (Array.isArray(state.entries) && state.entries.length)
+    );
+  }
+
+  function preserveCurrentGoogleConnection(nextState) {
+    return {
+      ...nextState,
+      settings: {
+        ...nextState.settings,
+        googleConnection: {
+          ...(store.getState().settings.googleConnection || {})
+        }
+      }
+    };
+  }
+
+  async function restoreFromGoogleFlow({ askFirst = true } = {}) {
+    if (askFirst) {
+      const ok = await modal.confirm('Restore From Google', 'Restore data from Google backup? This will replace current local data.');
+      if (!ok) return false;
+    }
+
+    toggleButtonBusy(restoreBtn, true, 'Restoring...');
+    try {
+      const result = await authService.restoreFromGoogle();
+      if (!result.ok) {
+        telemetry.track('google_restore_failed', { code: result.code || 'unknown' });
+        await modal.alert('Google Restore Failed', result.message || 'Unable to restore from Google.');
+        render(store.getState());
+        return false;
+      }
+
+      const imported = preserveCurrentGoogleConnection(importBackup(result.payload));
+      store.setState(imported, { activityMessage: 'State restored from Google backup', activityType: 'backup' });
+      telemetry.track('google_restore_success');
+      renderAll();
+      showToast(result.message || 'Google backup restored.');
+      return true;
+    } finally {
+      toggleButtonBusy(restoreBtn, false);
+    }
   }
 
   operatingDaysPicker.addEventListener('click', (event) => {
@@ -223,10 +294,25 @@ export function initSettingsFeature({
         render(store.getState());
         return;
       }
-      showToast(result.message || 'Google connected.');
+
+      const localState = store.getState();
+      showToast(result.backup?.exists
+        ? `${result.message || 'Google connected.'} Cloud backup found.`
+        : (result.message || 'Google connected.'));
       telemetry.track('google_connect_success');
       store.addActivity('Google account connected', 'auth');
       renderAll();
+
+      if (result.backup?.exists && !hasMeaningfulLocalData(localState)) {
+        const exportedAt = result.backup.snapshot?.exportedAt
+          ? ` from ${new Date(result.backup.snapshot.exportedAt).toLocaleString('en-ZA')}`
+          : '';
+        const ok = await modal.confirm(
+          'Restore Existing Setup',
+          `A Google backup${exportedAt} was found for this account.\n\nLoad that setup onto this phone now?`
+        );
+        if (ok) await restoreFromGoogleFlow({ askFirst: false });
+      }
     } finally {
       toggleButtonBusy(connectBtn, false);
     }
@@ -269,27 +355,7 @@ export function initSettingsFeature({
   });
 
   restoreBtn.addEventListener('click', async () => {
-    const ok = await modal.confirm('Restore From Google', 'Restore data from Google backup? This will replace current local data.');
-    if (!ok) return;
-
-    toggleButtonBusy(restoreBtn, true, 'Restoring...');
-    try {
-      const result = await authService.restoreFromGoogle();
-      if (!result.ok) {
-        telemetry.track('google_restore_failed', { code: result.code || 'unknown' });
-        await modal.alert('Google Restore Failed', result.message || 'Unable to restore from Google.');
-        render(store.getState());
-        return;
-      }
-
-      const imported = importBackup(result.payload);
-      store.setState(imported, { activityMessage: 'State restored from Google backup', activityType: 'backup' });
-      telemetry.track('google_restore_success');
-      renderAll();
-      showToast('Google backup restored.');
-    } finally {
-      toggleButtonBusy(restoreBtn, false);
-    }
+    await restoreFromGoogleFlow({ askFirst: true });
   });
 
   downloadBackupBtn.addEventListener('click', async () => {
@@ -324,7 +390,7 @@ export function initSettingsFeature({
     const text = await file.text();
     try {
       const parsed = JSON.parse(text);
-      const imported = importBackup(parsed);
+      const imported = preserveCurrentGoogleConnection(importBackup(parsed));
       store.setState(imported, { activityMessage: 'Backup imported', activityType: 'backup' });
       telemetry.track('backup_imported');
       renderAll();

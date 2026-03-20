@@ -15,9 +15,17 @@ export function initAssistantFeature({ assistantEngine, showToast, telemetry }) 
     stateEl.dataset.mode = mode;
   }
 
-  function pushMessage(role, text, meta = '') {
-    messages.push({ role, text, meta, at: new Date().toISOString() });
+  function pushMessage(role, text, meta = '', options = {}) {
+    messages.push({ role, text, meta, at: new Date().toISOString(), pending: Boolean(options.pending) });
     renderMessages();
+  }
+
+  function removePendingMessage() {
+    const index = messages.findIndex((message) => message.pending);
+    if (index >= 0) {
+      messages.splice(index, 1);
+      renderMessages();
+    }
   }
 
   function renderMessages() {
@@ -28,8 +36,10 @@ export function initAssistantFeature({ assistantEngine, showToast, telemetry }) 
 
     chatEl.innerHTML = messages
       .map((message) => `
-        <div class="msg ${message.role === 'user' ? 'user' : 'assistant'}">
-          ${escapeHtml(message.text).replace(/\n/g, '<br>')}
+        <div class="msg ${message.role === 'user' ? 'user' : 'assistant'}${message.pending ? ' is-typing' : ''}">
+          ${message.pending
+            ? '<span class="typing-dots" aria-label="Assistant is typing"><i></i><i></i><i></i></span>'
+            : escapeHtml(message.text).replace(/\n/g, '<br>')}
           ${message.meta ? `<div class="msg-meta">${escapeHtml(message.meta)}</div>` : ''}
         </div>
       `)
@@ -51,12 +61,14 @@ export function initAssistantFeature({ assistantEngine, showToast, telemetry }) 
     sendBtn.textContent = 'Sending...';
     input.disabled = true;
     setState('Assistant is thinking...', 'sending');
+    pushMessage('assistant', '', 'Working from your latest business data...', { pending: true });
 
     try {
       const response = await assistantEngine.ask(q);
       if (!response?.ok || !String(response.text || '').trim()) {
         throw new Error('Assistant returned an empty response.');
       }
+      removePendingMessage();
 
       const sourceMeta = response.mode === 'local'
         ? 'Source: Local insights'
@@ -66,9 +78,10 @@ export function initAssistantFeature({ assistantEngine, showToast, telemetry }) 
 
       pushMessage('assistant', response.text, sourceMeta);
       if (response.note) showToast(response.note);
-      setState('Response ready.', 'success');
+      setState('Response ready. Ask a follow-up for more detail.', 'success');
       telemetry.track('assistant_query_success', { mode: response.mode || 'unknown' });
     } catch (error) {
+      removePendingMessage();
       const fallback = 'I could not process that request. Ask about today sales, week summary, no-sale reasons, or trends.';
       pushMessage('assistant', fallback, 'Source: Local fallback');
       setState(`Assistant error: ${error.message || 'Unknown issue.'}`, 'error');

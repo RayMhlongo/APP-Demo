@@ -47,6 +47,53 @@ jobs:
       - name: Sync Capacitor
         run: npm run cap:sync
 
+      - name: Configure Android OAuth deep links
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text(encoding="utf-8")
+          deep_link_filter = """            <intent-filter>
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data
+                              android:scheme="cathdelcreamy"
+                              android:host="oauth-callback" />
+                          <data
+                              android:scheme="com.cathdelcreamy.demo"
+                              android:host="oauth-callback" />
+                      </intent-filter>
+          """
+          if 'android:host="oauth-callback"' not in text:
+              text = text.replace("</activity>", f"{deep_link_filter}\n        </activity>", 1)
+          else:
+              text = text.replace('android:scheme="@string/custom_url_scheme"', 'android:scheme="cathdelcreamy"')
+              if 'android:scheme="com.cathdelcreamy.demo"' not in text:
+                  text = text.replace(
+                      'android:scheme="cathdelcreamy"\n                    android:host="oauth-callback" />',
+                      'android:scheme="cathdelcreamy"\n                    android:host="oauth-callback" />\n                <data\n                    android:scheme="com.cathdelcreamy.demo"\n                    android:host="oauth-callback" />'
+                  )
+          manifest.write_text(text, encoding="utf-8")
+
+          strings = Path("android/app/src/main/res/values/strings.xml")
+          strings_text = strings.read_text(encoding="utf-8")
+          if '<string name="custom_url_scheme">' in strings_text:
+              import re
+              strings_text = re.sub(
+                  r'<string name="custom_url_scheme">.*?</string>',
+                  '<string name="custom_url_scheme">cathdelcreamy</string>',
+                  strings_text
+              )
+          else:
+              strings_text = strings_text.replace(
+                  '</resources>',
+                  '    <string name="custom_url_scheme">cathdelcreamy</string>\n</resources>'
+              )
+          strings.write_text(strings_text, encoding="utf-8")
+          PY
+
       - name: Ensure camera permission in Android manifest
         run: |
           python - <<'PY'

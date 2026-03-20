@@ -1,6 +1,7 @@
 import { addDays, formatLocalISO, startOfWeek, toDate, todayISO } from '../utils/date.js';
 
 const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKDAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function sameDay(a, b) {
   return String(a || '').slice(0, 10) === String(b || '').slice(0, 10);
@@ -249,6 +250,46 @@ export function missedDayPatterns(state) {
   };
 }
 
+export function weekdayPerformance(state, { month, year } = {}) {
+  const rows = WEEKDAY_SHORT.map((label, index) => ({
+    index,
+    label,
+    fullLabel: WEEKDAY_FULL[index],
+    total: 0,
+    saleEntries: 0,
+    saleDays: new Set(),
+    noSaleEntries: 0,
+    reasons: {}
+  }));
+
+  getSalesEntries(state).forEach((entry) => {
+    const d = toDate(entry.date);
+    if (!d) return;
+    if (Number.isInteger(month) && Number.isInteger(year) && !isInMonth(entry.date, year, month)) return;
+    const index = (d.getDay() + 6) % 7;
+    rows[index].total += Number(entry.amount || 0);
+    rows[index].saleEntries += 1;
+    rows[index].saleDays.add(entry.date);
+  });
+
+  getNoSaleEntries(state).forEach((entry) => {
+    const d = toDate(entry.date);
+    if (!d) return;
+    if (Number.isInteger(month) && Number.isInteger(year) && !isInMonth(entry.date, year, month)) return;
+    const index = (d.getDay() + 6) % 7;
+    rows[index].noSaleEntries += 1;
+    const reasonKey = String(entry.reasonKey || 'other');
+    rows[index].reasons[reasonKey] = (rows[index].reasons[reasonKey] || 0) + 1;
+  });
+
+  return rows.map((row) => ({
+    ...row,
+    saleDays: row.saleDays.size,
+    avgSalePerSellingDay: row.saleDays.size ? row.total / row.saleDays.size : 0,
+    topReason: Object.entries(row.reasons).sort((a, b) => b[1] - a[1])[0] || null
+  }));
+}
+
 export function getEntryStatusByDate(state) {
   const map = new Map();
   getNoSaleEntries(state).forEach((entry) => {
@@ -282,6 +323,7 @@ export function buildInsights(state) {
   const weeklyAvg = averageWeeklySales(state);
   const missedPatterns = missedDayPatterns(state);
   const currentMonthSellingDays = sellingDaysThisMonth(state);
+  const recommendations = businessRecommendations(state);
 
   if (strongest) results.push(`${strongest.day} is your strongest sales day.`);
   if (weakest) results.push(`${weakest.day} is your weakest sales day.`);
@@ -314,7 +356,62 @@ export function buildInsights(state) {
     results.push(`${missedPatterns.topDay} is your most missed day this month (${missedPatterns.topCount}).`);
   }
 
+  if (recommendations.length) results.push(recommendations[0]);
+
   return results.slice(0, 12);
+}
+
+export function businessRecommendations(state) {
+  const suggestions = [];
+  const strongest = strongestDay(state);
+  const commonReason = mostCommonNoSaleReason(state);
+  const coverage = businessDayCoverage(state);
+  const loyaltyCustomers = state.customers.length;
+
+  if (coverage.missingDays > 0) {
+    suggestions.push(`Capture the remaining ${coverage.missingDays} unlogged operating day(s) so reports stay accurate.`);
+  }
+
+  if (strongest) {
+    suggestions.push(`Prepare extra stock and staff cover before ${strongest.day}, because it is your highest-performing day.`);
+  }
+
+  if (commonReason?.reason === 'weather') {
+    suggestions.push('Weather is your biggest selling blocker. Plan an indoor route, rainy-day offer, or pre-order message.');
+  } else if (commonReason?.reason === 'stock_shortage') {
+    suggestions.push('Stock shortage is hurting sales. Refill earlier and review stock levels before peak trading days.');
+  } else if (commonReason?.reason === 'transport_issue') {
+    suggestions.push('Transport issues are recurring. Build a fallback transport plan for your busiest trading days.');
+  } else if (commonReason?.reason === 'equipment_issue') {
+    suggestions.push('Equipment issues are recurring. Keep a small maintenance checklist and backup essentials ready.');
+  }
+
+  if (!loyaltyCustomers) {
+    suggestions.push('Add regular buyers to loyalty so you can track repeat customers and shared wallets.');
+  }
+
+  if (!suggestions.length) {
+    suggestions.push('Keep logging every trading day consistently so the assistant can give sharper business advice.');
+  }
+
+  return suggestions.slice(0, 4);
+}
+
+function extractWeekdayIndex(question) {
+  const q = String(question || '').toLowerCase();
+  const names = [
+    ['monday', 'mon'],
+    ['tuesday', 'tue', 'tues'],
+    ['wednesday', 'wed'],
+    ['thursday', 'thu', 'thur', 'thurs'],
+    ['friday', 'fri'],
+    ['saturday', 'sat'],
+    ['sunday', 'sun']
+  ];
+  return names.findIndex((aliases) => aliases.some((alias) => {
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|\\W)${escaped}(\\W|$)`).test(q);
+  }));
 }
 
 export function assistantReply(question, state) {
@@ -334,28 +431,64 @@ export function assistantReply(question, state) {
   const weeklyAvg = averageWeeklySales(state);
   const coverage = businessDayCoverage(state);
   const missed = missedDayPatterns(state);
+  const weekdayStats = weekdayPerformance(state);
   const loyaltyCustomers = state.customers.length;
   const walletCount = state.wallets.length;
   const totalNoSaleLogs = getNoSaleEntries(state).length;
+  const dayIndex = extractWeekdayIndex(q);
+  const recommendations = businessRecommendations(state);
 
   function hasAny(words) {
-    return words.some((word) => q.includes(word));
+    return words.some((word) => {
+      const value = String(word || '').toLowerCase();
+      if (!value) return false;
+      if (value.includes(' ')) return q.includes(value);
+      const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`(^|\\W)${escaped}(\\W|$)`).test(q);
+    });
   }
 
   if (hasAny(['hello', 'hi', 'hey'])) {
-    return 'I can help with today sales, trends, missed days, reasons, streaks, averages, and loyalty summaries.';
+    return 'I can help with sales summaries, missed-day patterns, weekday performance, loyalty activity, reports, and practical next steps.';
   }
 
   if (hasAny(['today', 'daily']) && hasAny(['sale', 'sold', 'summary', 'total'])) {
-    return `Today: ${today.entries.length} sale entries, total ${today.total.toFixed(2)}.`;
+    return `Today you have ${today.entries.length} sale entr${today.entries.length === 1 ? 'y' : 'ies'} totaling ${today.total.toFixed(2)}.`;
   }
 
   if (hasAny(['week summary', 'weekly summary', 'this week', 'weekly'])) {
-    return `This week total is ${week.total.toFixed(2)} from ${week.entries.length} sales (${week.from} to ${week.to}).`;
+    return `This week total is ${week.total.toFixed(2)} from ${week.entries.length} sale entr${week.entries.length === 1 ? 'y' : 'ies'} between ${week.from} and ${week.to}.`;
   }
 
   if (hasAny(['month summary', 'monthly summary', 'this month', 'monthly'])) {
-    return `This month total is ${month.total.toFixed(2)} from ${month.entries.length} sales (${month.from} to ${month.to}).`;
+    return `This month total is ${month.total.toFixed(2)} from ${month.entries.length} sale entr${month.entries.length === 1 ? 'y' : 'ies'} between ${month.from} and ${month.to}.`;
+  }
+
+  if (dayIndex >= 0 && hasAny(['why', 'low', 'weak', 'poor', 'bad'])) {
+    const day = weekdayStats[dayIndex];
+    if (!day.saleEntries && !day.noSaleEntries) {
+      return `I do not have enough ${day.fullLabel} data yet to explain low performance. Keep logging both sales and no-sale days.`;
+    }
+
+    const pieces = [
+      `${day.fullLabel} brought in ${day.total.toFixed(2)} across ${day.saleEntries} sale entr${day.saleEntries === 1 ? 'y' : 'ies'} and ${day.saleDays} selling day${day.saleDays === 1 ? '' : 's'}.`
+    ];
+    if (day.noSaleEntries > 0) {
+      const reasonText = day.topReason ? ` Top no-sale reason was ${day.topReason[0].replace(/_/g, ' ')}.` : '';
+      pieces.push(`${day.fullLabel} also had ${day.noSaleEntries} recorded no-sale day${day.noSaleEntries === 1 ? '' : 's'}.${reasonText}`);
+    }
+    if (day.avgSalePerSellingDay > 0) {
+      pieces.push(`Average ${day.fullLabel} sales on days you traded were ${day.avgSalePerSellingDay.toFixed(2)}.`);
+    }
+    return pieces.join(' ');
+  }
+
+  if (dayIndex >= 0 && hasAny(['sales', 'sold', 'highest', 'lowest', 'best', 'worst', 'how did'])) {
+    const day = weekdayStats[dayIndex];
+    if (!day.saleEntries && !day.noSaleEntries) {
+      return `There is no meaningful ${day.fullLabel} history yet.`;
+    }
+    return `${day.fullLabel} total sales are ${day.total.toFixed(2)} across ${day.saleDays} selling day${day.saleDays === 1 ? '' : 's'}, with ${day.noSaleEntries} no-sale log${day.noSaleEntries === 1 ? '' : 's'}.`;
   }
 
   if (hasAny(['strongest', 'best day', 'top day', 'highest day'])) {
@@ -399,7 +532,7 @@ export function assistantReply(question, state) {
   }
 
   if (hasAny(['loyalty', 'customer', 'wallet', 'qr'])) {
-    return `Loyalty overview: ${loyaltyCustomers} customer profile(s) across ${walletCount} wallet(s).`;
+    return `Loyalty overview: ${loyaltyCustomers} customer profile(s) across ${walletCount} wallet(s). Use this to track repeat buyers, shared family balances, and QR-based checkout.`;
   }
 
   if (hasAny(['report', 'explain'])) {
@@ -417,13 +550,25 @@ export function assistantReply(question, state) {
     return `${patternLine} Week total is ${week.total.toFixed(2)} and month total is ${month.total.toFixed(2)}.`;
   }
 
+  if (hasAny(['improve', 'improvement', 'suggest', 'recommend', 'advice', 'help my business', 'grow'])) {
+    return recommendations.join(' ');
+  }
+
+  if (hasAny(['how are we doing', 'how is the business', 'business doing'])) {
+    return [
+      `This week you made ${week.total.toFixed(2)} from ${week.entries.length} sales.`,
+      strongest ? `${strongest.day} is your strongest day.` : 'There is not enough data to identify your strongest day yet.',
+      coverage.businessDays > 0 ? `You have logged ${coverage.soldDays} sold day(s), ${coverage.noSaleDays} no-sale day(s), and ${coverage.missingDays} missing operating day(s) this month.` : 'Operating days are not configured clearly yet.'
+    ].join(' ');
+  }
+
   return [
-    'Try asking:',
-    '- today / week / month sales summary',
-    '- strongest or weakest day',
-    '- missed-day and no-sale reason patterns',
-    '- streaks and averages',
-    '- week-over-week or month-over-month',
-    '- loyalty/customer overview'
+    'Try asking things like:',
+    '- How were sales this week?',
+    '- Which day had the highest sales?',
+    '- Why were sales low on Monday?',
+    '- What patterns matter this month?',
+    '- How can I improve the business?',
+    '- Explain this report or summarize loyalty activity.'
   ].join('\n');
 }
