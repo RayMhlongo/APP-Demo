@@ -215,6 +215,20 @@ function summarizeBackupPayload(payload) {
   };
 }
 
+function buildDriveMultipartPayload({ boundary, metadata, content }) {
+  return [
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    JSON.stringify(metadata),
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    content,
+    `--${boundary}--`
+  ].join('\r\n');
+}
+
 function environmentStatus(clientId = '') {
   const native = isNativeCapacitor();
   const platform = platformName();
@@ -700,19 +714,15 @@ export function createAuthService({ getState, setState }) {
 
       const existing = await findBackupFile({ interactive: false });
       const boundary = `cc-${Date.now()}`;
-      const metadata = JSON.stringify({ name: FILE_NAME, parents: ['appDataFolder'], mimeType: 'application/json' });
       const content = JSON.stringify(payload, null, 2);
-      const multipart = [
-        `--${boundary}`,
-        'Content-Type: application/json; charset=UTF-8',
-        '',
+      const metadata = existing
+        ? { name: FILE_NAME, mimeType: 'application/json' }
+        : { name: FILE_NAME, parents: ['appDataFolder'], mimeType: 'application/json' };
+      const multipart = buildDriveMultipartPayload({
+        boundary,
         metadata,
-        `--${boundary}`,
-        'Content-Type: application/json; charset=UTF-8',
-        '',
-        content,
-        `--${boundary}--`
-      ].join('\r\n');
+        content
+      });
 
       const baseUrl = existing
         ? `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart&fields=id,modifiedTime`
