@@ -99,17 +99,47 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
+      - name: Resolve and sign release APK
+        run: |
+          SIGNED_APK="android/app/build/outputs/apk/release/app-release.apk"
+          UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          if [ -f "$SIGNED_APK" ]; then
+            echo "APK_FILE=$SIGNED_APK" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          if [ ! -f "$UNSIGNED_APK" ]; then
+            echo "No release APK output found." >&2
+            exit 1
+          fi
+
+          APKSIGNER_BIN="$(command -v apksigner || true)"
+          if [ -z "$APKSIGNER_BIN" ]; then
+            APKSIGNER_BIN="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          fi
+
+          "$APKSIGNER_BIN" sign \
+            --ks ~/.android/debug.keystore \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --out "$SIGNED_APK" \
+            "$UNSIGNED_APK"
+
+          "$APKSIGNER_BIN" verify "$SIGNED_APK"
+          echo "APK_FILE=$SIGNED_APK" >> $GITHUB_ENV
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: cathdel-creamy-release-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: ${{ env.APK_FILE }}
           if-no-files-found: error
 
       - name: Create Release with APK
         uses: softprops/action-gh-release@v1
         with:
-          files: android/app/build/outputs/apk/release/*.apk
+          files: ${{ env.APK_FILE }}
           tag_name: cathdel-v${{ github.run_number }}
           release_name: Cathdel Creamy APK v${{ github.run_number }}
           draft: false
