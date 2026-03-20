@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cathdel Creamy - Google Callback</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Manrope, system-ui, sans-serif;
+      background: #e6f2f4;
+      color: #173a43;
+    }
+    .card {
+      width: min(420px, 92vw);
+      background: #fff;
+      border: 1px solid #c9dde2;
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(20, 63, 75, 0.12);
+    }
+    h1 { margin: 0 0 8px; font-size: 1.1rem; }
+    p { margin: 0; color: #53757c; }
+    #fallback { display: none; margin-top: 10px; }
+    a { color: #2b8ea4; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Returning To Cathdel Creamy</h1>
+    <p id="status">Completing Google sign-in...</p>
+    <div id="fallback">
+      <p>If the app did not open automatically, tap below:</p>
+      <a id="openLink" href="#">Open Cathdel Creamy</a>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+      const params = new URLSearchParams(hash);
+      const appUrl = new URL('com.cathdelcreamy.demo://oauth-callback');
+      ['access_token', 'token_type', 'expires_in', 'scope', 'state', 'error', 'error_description'].forEach((key) => {
+        const value = params.get(key);
+        if (value) appUrl.searchParams.set(key, value);
+      });
+
+      const statusEl = document.getElementById('status');
+      if (params.get('error')) {
+        statusEl.textContent = 'Google sign-in failed. Returning to app...';
+      } else {
+        statusEl.textContent = 'Google sign-in completed. Returning to app...';
+      }
+
+      const target = appUrl.toString();
+      window.location.replace(target);
+
+      setTimeout(() => {
+        const fallback = document.getElementById('fallback');
+        const openLink = document.getElementById('openLink');
+        openLink.href = target;
+        fallback.style.display = 'block';
+      }, 1200);
+    })();
+  </script>
+</body>
+</html>

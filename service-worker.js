@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'cathdel-v21';
+const CACHE_VERSION = 'cathdel-v22';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const OFFLINE_FALLBACK_URL = new URL('./index.html', self.location.href).toString();
@@ -7,6 +7,7 @@ const APP_SHELL = [
   './',
   './index.html',
   './index.html?source=pwa',
+  './oauth-callback.html',
   './manifest.json',
   './service-worker.js',
   './client-logo.png',
@@ -20,6 +21,7 @@ const APP_SHELL = [
   './icons/icon-512x512.png',
   './vendor/qrcode.min.js',
   './vendor/html5-qrcode.min.js',
+  './vendor/jspdf.umd.min.js',
   './src/main.js',
   './src/components/modal.js',
   './src/components/nav.js',

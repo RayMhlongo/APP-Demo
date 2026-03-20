@@ -6,7 +6,7 @@ import {
   buildSummaryCsv,
   resolveReportRange
 } from '../../services/reports.js';
-import { exportTextFile, printSupportStatus } from '../../services/file-actions.js';
+import { exportTextFile, printSummaryFile, printSupportStatus } from '../../services/file-actions.js';
 import { validateReportRange } from '../../services/validation.js';
 import { formatMoney } from '../../utils/format.js';
 
@@ -103,7 +103,7 @@ export function initReportsFeature({ store, showToast, telemetry, modal }) {
       }
 
       telemetry.track(successEvent, { method: result.method || 'unknown' });
-      showToast(successMessage);
+      showToast(result.message || successMessage);
     } finally {
       toggleBusy(button, false);
     }
@@ -168,9 +168,23 @@ export function initReportsFeature({ store, showToast, telemetry, modal }) {
       return;
     }
 
-    telemetry.track('report_print_requested');
-    window.print();
-    showToast('Print dialog requested.');
+    const state = store.getState();
+    const summary = lastSummary || buildReportSummary(state, getRange());
+    const lines = buildReportNarrative(summary, state.settings.currency || 'ZAR');
+    const printResult = await printSummaryFile({
+      filename: `cathdel-creamy-summary-${dateStamp()}.pdf`,
+      title: `Cathdel Creamy Summary (${summary.range.from} to ${summary.range.to})`,
+      lines
+    });
+
+    if (!printResult.ok) {
+      telemetry.track('report_print_failed', { code: printResult.code || 'unknown' });
+      await modal.alert('Print Failed', printResult.message || 'Unable to generate printable summary.');
+      return;
+    }
+
+    telemetry.track('report_print_requested', { method: printResult.method || 'unknown' });
+    showToast(printResult.message || 'Print flow started.');
   });
 
   return {

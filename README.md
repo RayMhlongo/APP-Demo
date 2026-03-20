@@ -24,6 +24,8 @@ It helps the owner track sales, missed trading days, loyalty/customer activity, 
 - Assistant with expanded business-question coverage
 - Settings for business rules, operating days, backup, and integrations
 - Export and backup tooling with truthful success/error messaging
+- Native Android CSV export to app Documents folder + share/open flow
+- Native Android print flow via generated summary PDF
 
 ## Tech Stack
 
@@ -68,7 +70,7 @@ It helps the owner track sales, missed trading days, loyalty/customer activity, 
 ```bash
 npm install
 npm run cap:sync
-npm run apk:debug
+npm run apk:release
 ```
 
 If local Android SDK is not configured, use the GitHub Actions release workflow to build APK automatically.
@@ -91,10 +93,17 @@ Google features require configuration and environment support.
    - save settings
    - then connect Google
 
-### Important APK Note
+### Android OAuth Callback Setup
 
-The current APK wrapper uses a web popup OAuth flow. In many APK WebView contexts, Google popup OAuth is unsupported.  
-In that case, the app now shows an honest unsupported message instead of false success.
+For Android Google linking to return to the app cleanly:
+
+1. Add this redirect URI to your OAuth client config where applicable:
+   - `https://raymhlongo.github.io/APP-Demo/oauth-callback.html`
+2. Keep Android custom scheme callback in app manifest:
+   - `com.cathdelcreamy.demo://oauth-callback`
+3. In app Settings, save a valid Google OAuth client ID before tapping **Connect Google**.
+
+The APK opens Google auth intentionally in an external browser and then deep-links back into Cathdel Creamy.
 
 ## Optional Observability Setup
 

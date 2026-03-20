@@ -80,6 +80,10 @@ export function initSettingsFeature({
       statusEl.textContent = `Google: ${env.message}`;
       return;
     }
+    if (env.redirectUri && !conn.connected) {
+      statusEl.innerHTML = `Google: Ready for native browser sign-in. Configure OAuth redirect URI as <strong>${escapeHtml(env.redirectUri)}</strong>.`;
+      return;
+    }
     if (!conn.connected) {
       statusEl.textContent = 'Google: Configured but not connected.';
       return;
@@ -304,7 +308,7 @@ export function initSettingsFeature({
     }
 
     telemetry.track('backup_downloaded', { method: result.method || 'unknown' });
-    showToast('Backup export has started.');
+    showToast(result.message || 'Backup exported.');
   });
 
   importBackupInput.addEventListener('change', async (event) => {
@@ -378,7 +382,7 @@ export function initSettingsFeature({
     }
 
     telemetry.track('settings_export_csv', { method: result.method || 'unknown' });
-    showToast('CSV export has started.');
+    showToast(result.message || 'CSV export completed.');
   });
 
   clientIdInput.addEventListener('input', () => {

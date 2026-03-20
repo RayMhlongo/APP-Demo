@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-debug-apk:
+  build-release-apk:
     runs-on: ubuntu-latest
 
     steps:
@@ -78,25 +78,40 @@ jobs:
                   icon.save(out / name)
           PY
 
-      - name: Build debug APK
+      - name: Ensure debug keystore for release signing
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore ~/.android/debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Cathdel Creamy,O=Cathdel,C=ZA" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000
+          fi
+
+      - name: Build release APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleRelease
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cathdel-creamy-demo-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: cathdel-creamy-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
       - name: Create Release with APK
         uses: softprops/action-gh-release@v1
         with:
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: android/app/build/outputs/apk/release/app-release.apk
           tag_name: cathdel-v${{ github.run_number }}
-          release_name: Cathdel Creamy Demo APK v${{ github.run_number }}
+          release_name: Cathdel Creamy APK v${{ github.run_number }}
           draft: false
           prerelease: false
         env:
